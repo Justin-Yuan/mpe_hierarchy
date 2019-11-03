@@ -216,7 +216,7 @@ class MultiAgentEnv(gym.Env):
                         word = '_'
                     else:
                         word = alphabet[np.argmax(other.state.c)]
-                    message += (other.name + ' to ' + agent.name + ': ' + word + '   ')
+                    # message += (other.name + ' to ' + agent.name + ': ' + word + '   ')
             print(message)
 
         for i in range(len(self.viewers)):
@@ -255,7 +255,8 @@ class MultiAgentEnv(gym.Env):
         for i in range(len(self.viewers)):
             from multiagent import rendering
             # update bounds to center around agent
-            cam_range = 1
+            # cam_range = 1
+            cam_range = 5
             if self.shared_viewer:
                 pos = np.zeros(self.world.dim_p)
             else:

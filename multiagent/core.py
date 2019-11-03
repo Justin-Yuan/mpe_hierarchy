@@ -1,5 +1,16 @@
 import numpy as np
 
+##################################################################################
+
+# map world entities to indices 
+entity2idx = {
+    T.__name__: i for i, T in enumerate([
+        SkilledAgent, Landmark, Mine
+    ])
+}
+
+##################################################################################
+
 # physical/external base state of all entites
 class EntityState(object):
     def __init__(self):
@@ -78,12 +89,24 @@ class Agent(Entity):
         # script behavior to execute
         self.action_callback = None
 
+
+# agent with fixed skill points 
+class SkilledAgent(Agent):
+    super(SkilledAgent, self).__init__()
+    self.skill_points = 10
+    # skills (max_speed, vision_range, mine_laod)
+    self.vision_range = None 
+    self.max_speed = None 
+    self.mine_load = None 
+
+
 # multi-agent world
 class World(object):
     def __init__(self):
         # list of agents and entities (can change at execution-time!)
         self.agents = []
         self.landmarks = []
+        self.mines = []
         # communication channel dimensionality
         self.dim_c = 0
         # position dimensionality
@@ -101,7 +124,7 @@ class World(object):
     # return all entities in the world
     @property
     def entities(self):
-        return self.agents + self.landmarks
+        return self.agents + self.landmarks + self.mines
 
     # return all agents controllable by external policies
     @property
@@ -204,7 +227,8 @@ class Mine(Entity):
     def __init__(self):
         super(Mine, self).__init__()
         self.total_mine = None 
-        self.max_total_mine = 10
+        self.min_total_mine = 10
+        self.max_total_mine = 30
 
         
 
