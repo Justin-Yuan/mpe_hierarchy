@@ -195,11 +195,16 @@ class World(object):
         force_b = -force if entity_b.movable else None
         return [force_a, force_b]
 
+##################################################################################
+
 
 class Mine(Entity):
     """ gold mines for cooperative tasks 
     """
     def __init__(self):
-        super(Mine, self).__init__() 
+        super(Mine, self).__init__()
+        self.total_mine = None 
+        self.max_total_mine = 10
 
-    
+        
+

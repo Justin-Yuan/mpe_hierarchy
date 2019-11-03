@@ -13,7 +13,7 @@ class MultiAgentEnv(gym.Env):
 
     def __init__(self, world, reset_callback=None, reward_callback=None,
                  observation_callback=None, info_callback=None,
-                 done_callback=None, shared_viewer=True):
+                 done_callback=None, shared_viewer=True, update_callback=None):
 
         self.world = world
         self.agents = self.world.policy_agents
@@ -25,6 +25,7 @@ class MultiAgentEnv(gym.Env):
         self.observation_callback = observation_callback
         self.info_callback = info_callback
         self.done_callback = done_callback
+        self.update_callback = update_callback
         # environment parameters
         self.discrete_action_space = True
         # if true, action is a number 0...N, otherwise action is a one-hot N-dimensional vector
@@ -88,6 +89,7 @@ class MultiAgentEnv(gym.Env):
             self._set_action(action_n[i], agent, self.action_space[i])
         # advance world state
         self.world.step()
+        self._update_world()
         # record observation for each agent
         for agent in self.agents:
             obs_n.append(self._get_obs(agent))
@@ -114,6 +116,11 @@ class MultiAgentEnv(gym.Env):
         for agent in self.agents:
             obs_n.append(self._get_obs(agent))
         return obs_n
+
+    # update world assets / states 
+    def _update_world(self):
+        if self.update_callback is not None:
+            self.update_callback(self.world)
 
     # get info used for benchmarking
     def _get_info(self, agent):
