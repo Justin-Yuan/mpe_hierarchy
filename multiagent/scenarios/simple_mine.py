@@ -32,7 +32,7 @@ class Scenario(BaseScenario):
             landmark.name = 'landmark %d' % i
             landmark.collide = False
             landmark.movable = False
-            landmark.size = 0.
+            landmark.size = 0.2
         # add mines 
         world.mines = [Mine() for i in range(num_mines)]
         for i, mine in enumerate(world.mines):
@@ -109,23 +109,28 @@ class Scenario(BaseScenario):
 
     def observation(self, agent, world):
         """ get positions of all entities in this agent's reference frame
-        returns: dict of entity states wrt agent's reference 
+        returns: dict of entity states & masks wrt agent's reference 
+        state convention: [entity_type, entity_relative_pos, entity_vel, communication]
         """ 
         states, masks = [], []
+
         # get self state 
-        self_state = np.concatenate([
-            entity2idx[agent.__class__.__name__], agent.state.pos, agent.state.vel
-        ])
-        state.append(self_state) 
+        self_state = [entity2idx[agent.__class__.__name__], agent.state.pos, agent.state.vel]
+        if world.dim_c > 0:
+            self_state += [agent.satet.c]
+        self_state = np.concatenate(self_state)
+        states.append(self_state) 
         masks.append(1)
+
         # get each entity to agent state 
         for e in world.entities: 
             if e is agent: 
                 continue 
             e_pos = e.state.p_pos - agent.state.p_pos
-            e_state = np.concatenate([
-                entity2idx[e.__class__.__name__], e_pos, e.state.vel
-            ])
+            e_state = [entity2idx[e.__class__.__name__], e_pos, e.state.vel]
+            if world.dim_c > 0 and "Agent" in e.__class__.__name__:
+                e_state += [e.satet.c]
+            e_state = np.concatenate(e_state)
             states.append(e_state)
             masks.append(1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range else 0)
 
