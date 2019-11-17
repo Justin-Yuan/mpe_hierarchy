@@ -21,17 +21,23 @@ class BaseScenario(object):
         return seed
         
     def change_entity_attribute(self, entity, **kwargs):
-        if 'agent' in entity.name and 'agent_config' in kwargs:
-            change_fn = kwargs['agent_config']['change_fn']
+        # if 'agent' in entity.name and 'agent_config' in kwargs:
+        #     change_fn = kwargs['agent_config']['change_fn']
+        #     change_fn(entity)
+        # elif 'landmard' in entity.name and 'landmard_config' in kwargs:
+        #     change_fn = kwargs['landmark_config']['change_fn']
+        #     change_fn(entity)
+        # elif 'food' in entity.name and 'food_config' in kwargs:
+        #     change_fn = kwargs['food_config']['change_fn']
+        #     change_fn(entity)
+        # elif 'forest' in entity.name and 'forest_config' in kwargs:
+        #     change_fn = kwargs['forest_config']['change_fn']
+        #     change_fn(entity)
+        # else:
+        #     pass
+        ent_name = entity.name.split(" ")[0]
+        ent_config = ent_name + "_config"
+        if ent_config in kwargs:
+            change_fn = kwargs[ent_config]['change_fn']
             change_fn(entity)
-        elif 'landmard' in entity.name and 'landmard_config' in kwargs:
-            change_fn = kwargs['landmark_config']['change_fn']
-            change_fn(entity)
-        elif 'food' in entity.name and 'food_config' in kwargs:
-            change_fn = kwargs['food_config']['change_fn']
-            change_fn(entity)
-        elif 'forest' in entity.name and 'forest_config' in kwargs:
-            change_fn = kwargs['forest_config']['change_fn']
-            change_fn(entity)
-        else:
-            pass
+        
