@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-import os,sys
-sys.path.insert(1, os.path.join(sys.path[0], '..'))
+import os
+import sys
+# sys.path.insert(1, os.path.join(sys.path[0], '..'))
 import argparse
 
 import cv2 
@@ -83,6 +84,9 @@ def save_video(frames, fps=20, output="out.avi"):
         writer.write(f)
     writer.release()
 
+def savegif(arrs, output="demo.gif"):
+    import imageio
+    imageio.mimsave(output, arrs)
 
 
 ##################################################################################
@@ -135,10 +139,11 @@ def main(game="mine"):
         count += 1
         print(count)
         print(reward_n)
-        if count > 500: break 
+        if count > args.length: break 
 
     # save demo video
-    save_video(frames, output=args.output) 
+    # save_video(frames, output=args.output) 
+    savegif(frames, output=args.output) 
 
 
 if __name__ == '__main__':
@@ -146,7 +151,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=None)
     parser.add_argument('-s', '--scenario', default='simple.py', help='Path of the scenario Python script.')
     parser.add_argument('-g', '--game', default='interactive', help='type of policy to try')
-    parser.add_argument('-o', '--output', default="demo.avi", help='output name of demo video')
+    parser.add_argument('-o', '--output', default="demo.gif", help='output name of demo video')
+    parser.add_argument('-l', '--length', default=100, type=int, help='length of demo video')
     args = parser.parse_args()
     # run main 
     main(args)

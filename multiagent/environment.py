@@ -70,10 +70,11 @@ class MultiAgentEnv(gym.Env):
                 self.action_space.append(act_space)
             else:
                 self.action_space.append(total_action_space[0])
-            # TODO: !!! obs disabled 
             # observation space
-            # obs_dim = len(observation_callback(agent, self.world))
-            # self.observation_space.append(spaces.Box(low=-np.inf, high=+np.inf, shape=(obs_dim,), dtype=np.float32))
+            obs_sample = observation_callback(agent, self.world)
+            obs_space = self.make_observation_space(obs_sample) 
+            self.observation_space.append(obs_space)
+
             agent.action.c = np.zeros(self.world.dim_c)
 
         # rendering
@@ -83,6 +84,36 @@ class MultiAgentEnv(gym.Env):
         else:
             self.viewers = [None] * self.n
         self._reset_render()
+
+    def make_observation_space(self, obs_sample):
+        """ make per agent observation space from a given sample 
+            compatible with original mpe and mpe_hierarchy
+        """
+        if isinstance(obs_sample, np.ndarray):
+            # for original mpe
+            obs_dim = len(obs_sample)
+            obs_space = spaces.Box(low=-np.inf, high=+np.inf, shape=(obs_dim,), dtype=np.float32)
+        elif isinstance(obs_sample, dict):
+            # for mpe_hierarchy 
+            obs_space = {}
+            for k, v in obs_sample.items():
+                if k == "masks":
+                    n = len(v)
+                    space = spaces.MultiBinary(n)
+                elif k == "states":
+                    assert len(v) > 0
+                    n, state_dim = len(v), len(v[0])
+                    # list of continuous agetn states (from perspective of current agent)
+                    space = spaces.Tuple((
+                        spaces.Box(low=-np.inf, high=+np.inf, shape=(state_dim,), dtype=np.float32) 
+                        for _ in range(n)
+                    ))
+                obs_space[k] = space 
+            obs_space = spaces.Dict(spaces=obs_space)
+        else:
+            # default to an empty obs space 
+            obs_sapce = spaces.Box(low=-np.inf, high=+np.inf, shape=(1,), dtype=np.float32)
+        return obs_space 
 
     def step(self, action_n):
         obs_n = []
