@@ -1,16 +1,22 @@
 import numpy as np
-from multiagent.core import World, entity2idx, SkilledAgent, Landmark, Mine
-from multiagent.scenario import BaseScenario
+from ..core import World, entity2idx, SkilledAgent, Landmark, Mine
+from ..scenario import BaseScenario
 
 
 class Scenario(BaseScenario):
 
-    def make_world(self):
+    def __init__(self):
+        self.update_world = None 
+
+    def make_world(self, **kwargs):
+        self.before_make_world(**kwargs)
+
         world = World()
+        world.np_random = self.np_random
         # set any world properties first
         world.dim_c = 2
-        num_good_agents = 1
-        num_adversaries = 3
+        num_good_agents = 2
+        num_adversaries = 4
         num_agents = num_adversaries + num_good_agents
         num_landmarks = 2
         # add agents
@@ -28,6 +34,9 @@ class Scenario(BaseScenario):
             # temporary skill allocations
             agent.vision_range = np.random.uniform(1, agent.skill_points)
             agent.max_speed = agent.skill_points - agent.vision_range
+            if agent.adversary:
+                agent.max_speed /= 10
+            self.change_entity_attribute(landmark, **kwargs)
             
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]
@@ -37,6 +46,8 @@ class Scenario(BaseScenario):
             landmark.movable = False
             landmark.size = 0.2
             landmark.boundary = False
+            self.change_entity_attribute(landmark, **kwargs)
+
         # make initial conditions
         self.reset_world(world)
         return world
@@ -135,24 +146,6 @@ class Scenario(BaseScenario):
         return rew
 
     def observation(self, agent, world):
-        # get positions of all entities in this agent's reference frame
-        entity_pos = []
-        for entity in world.landmarks:
-            if not entity.boundary:
-                entity_pos.append(entity.state.p_pos - agent.state.p_pos)
-        # communication of all other agents
-        comm = []
-        other_pos = []
-        other_vel = []
-        for other in world.agents:
-            if other is agent: continue
-            comm.append(other.state.c)
-            other_pos.append(other.state.p_pos - agent.state.p_pos)
-            if not other.adversary:
-                other_vel.append(other.state.p_vel)
-        return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + other_vel)
-
-    def observation(self, agent, world):
         """ get positions of all entities in this agent's reference frame
         returns: dict of entity states & masks wrt agent's reference 
         state convention: [entity_type, entity_relative_pos, entity_vel, communication]
@@ -160,9 +153,10 @@ class Scenario(BaseScenario):
         states, masks = [], []
 
         # get self state 
-        self_state = [entity2idx[agent.__class__.__name__], agent.state.pos, agent.state.vel]
-        if world.dim_c > 0:
-            self_state += [agent.satet.c]
+        self_type = agent.__class__.__name__
+        self_state = [[entity2idx[self_type]], agent.state.p_pos, agent.state.p_vel]
+        if "Agent" in self_type:    # only agent has communication
+            self_state += [agent.state.c]
         self_state = np.concatenate(self_state)
         states.append(self_state) 
         masks.append(1)
@@ -171,14 +165,16 @@ class Scenario(BaseScenario):
         for e in world.entities: 
             if e is agent: 
                 continue 
-            e_pos = e.state.p_pos - agent.state.p_pos                
-            e_state = [entity2idx[e.__class__.__name__], e_pos, e.state.vel]
+            e_pos = e.state.p_pos - agent.state.p_pos   
+            e_type = e.__class__.__name__             
+            e_state = [[entity2idx[e_type]], e_pos, e.state.p_vel]
             # append communication too 
-            if world.dim_c > 0 and "Agent" in e.__class__.__name__:
-                e_state += [e.satet.c]
+            if "Agent" in e_type:
+                e_state += [e.state.c]
             e_state = np.concatenate(e_state)
             states.append(e_state)
             masks.append(1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range else 0)
 
         return {"states": states, "masks": masks}
+
 

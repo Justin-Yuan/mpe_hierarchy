@@ -2,15 +2,6 @@ import numpy as np
 
 ##################################################################################
 
-# map world entities to indices 
-entity2idx = {
-    T.__name__: i for i, T in enumerate([
-        SkilledAgent, Landmark, Mine
-    ])
-}
-
-##################################################################################
-
 # physical/external base state of all entites
 class EntityState(object):
     def __init__(self):
@@ -36,26 +27,26 @@ class Action(object):
 
 # properties and state of physical world entity
 class Entity(object):
-    def __init__(self):
+    def __init__(sel, **kwargs):
         # name 
         self.name = ''
         # properties:
-        self.size = 0.050
+        self.size = kwargs['size_fn']() if 'size_fn' in kwargs else 0.050
         # entity can move / be pushed
         self.movable = False
         # entity collides with others
         self.collide = True
         # material density (affects mass)
-        self.density = 25.0
+        self.density = kwargs['density_fn']() if 'density_fn' in kwargs else 25.0
         # color
         self.color = None
         # max speed and accel
-        self.max_speed = None
-        self.accel = None
+        self.max_speed = kwargs['max_speed_fn']() if 'max_speed_fn' in kwargs else None
+        self.accel = kwargs['accel_fn']() if 'accel_fn' in kwargs else None
         # state
         self.state = EntityState()
         # mass
-        self.initial_mass = 1.0
+        self.initial_mass = kwargs['init_mass_fn']() if 'init_mass_fn' in kwargs else 1.0
 
     @property
     def mass(self):
@@ -68,8 +59,8 @@ class Landmark(Entity):
 
 # properties of agent entities
 class Agent(Entity):
-    def __init__(self):
-        super(Agent, self).__init__()
+    def __init__(self, **kwargs):
+        super(Agent, self).__init__(**kwargs)
         # agents are movable by default
         self.movable = True
         # cannot send communication signals
@@ -81,7 +72,7 @@ class Agent(Entity):
         # communication noise amount
         self.c_noise = None
         # control range
-        self.u_range = 1.0
+        self.u_range = kwargs['u_range_fn']() if 'u_range_fn' in kwargs else 1.0
         # state
         self.state = AgentState()
         # action
@@ -92,12 +83,13 @@ class Agent(Entity):
 
 # agent with fixed skill points 
 class SkilledAgent(Agent):
-    super(SkilledAgent, self).__init__()
-    self.skill_points = 10
-    # skills (max_speed, vision_range, mine_laod)
-    self.vision_range = None 
-    self.max_speed = None 
-    self.mine_load = None 
+    def __init__(self, **kwargs):
+        super(SkilledAgent, self).__init__(**kwargs)
+        self.skill_points = 10
+        # skills (max_speed, vision_range, mine_laod)
+        self.vision_range = None 
+        self.max_speed = None 
+        self.mine_load = None 
 
 
 # multi-agent world
@@ -120,6 +112,7 @@ class World(object):
         # contact response parameters
         self.contact_force = 1e+2
         self.contact_margin = 1e-3
+        self.np_random = np.random
 
     # return all entities in the world
     @property
@@ -158,7 +151,7 @@ class World(object):
         # set applied forces
         for i,agent in enumerate(self.agents):
             if agent.movable:
-                noise = np.random.randn(*agent.action.u.shape) * agent.u_noise if agent.u_noise else 0.0
+                noise = self.np_random.randn(*agent.action.u.shape) * agent.u_noise if agent.u_noise else 0.0
                 p_force[i] = agent.action.u + noise                
         return p_force
 
@@ -196,7 +189,7 @@ class World(object):
         if agent.silent:
             agent.state.c = np.zeros(self.dim_c)
         else:
-            noise = np.random.randn(*agent.action.c.shape) * agent.c_noise if agent.c_noise else 0.0
+            noise = self.np_random.randn(*agent.action.c.shape) * agent.c_noise if agent.c_noise else 0.0
             agent.state.c = agent.action.c + noise      
 
     # get collision forces for any contact between two entities
@@ -227,8 +220,19 @@ class Mine(Entity):
     def __init__(self):
         super(Mine, self).__init__()
         self.total_mine = None 
-        self.min_total_mine = 10
-        self.max_total_mine = 30
+        self.min_total_mine = 20
+        self.max_total_mine = 100
 
         
 
+##################################################################################
+
+# map world entities to indices 
+entity2idx = {
+    T.__name__: i for i, T in enumerate([
+        SkilledAgent, Landmark, Mine
+    ])
+}
+idx2entity = {
+    v: k for k, v in entity2idx.items()
+}

@@ -20,7 +20,7 @@ if __name__ == '__main__':
     # create multiagent environment
     # env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, info_callback=None, shared_viewer = False)
     env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, 
-        info_callback=None, shared_viewer = False, update_callback=scenario.update_world)
+        info_callback=None, shared_viewer=True, update_callback=scenario.update_world)
     # render call to create viewer window (necessary only for interactive policies)
 
     env.render()

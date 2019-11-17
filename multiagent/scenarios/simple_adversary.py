@@ -1,33 +1,41 @@
 import numpy as np
-from multiagent.core import World, Agent, Landmark
-from multiagent.scenario import BaseScenario
+from mpe.core import World, Agent, Landmark
+from mpe.scenario import BaseScenario
 
 
 class Scenario(BaseScenario):
 
-    def make_world(self):
+    def make_world(self, **kwargs):
+        self.before_make_world(**kwargs)
+
         world = World()
+        world.np_random = self.np_random
         # set any world properties first
         world.dim_c = 2
         num_agents = 3
         world.num_agents = num_agents
         num_adversaries = 1
         num_landmarks = num_agents - 1
+
         # add agents
-        world.agents = [Agent() for i in range(num_agents)]
+        world.agents = [Agent() for _ in range(num_agents)]
         for i, agent in enumerate(world.agents):
             agent.name = 'agent %d' % i
             agent.collide = False
             agent.silent = True
             agent.adversary = True if i < num_adversaries else False
             agent.size = 0.15
+            self.change_entity_attribute(agent, **kwargs)
+        
         # add landmarks
-        world.landmarks = [Landmark() for i in range(num_landmarks)]
+        world.landmarks = [Landmark() for _ in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
             landmark.name = 'landmark %d' % i
             landmark.collide = False
             landmark.movable = False
             landmark.size = 0.08
+            self.change_entity_attribute(landmark, **kwargs)
+
         # make initial conditions
         self.reset_world(world)
         return world
@@ -41,17 +49,17 @@ class Scenario(BaseScenario):
         for i, landmark in enumerate(world.landmarks):
             landmark.color = np.array([0.15, 0.15, 0.15])
         # set goal landmark
-        goal = np.random.choice(world.landmarks)
+        goal = self.np_random.choice(world.landmarks)
         goal.color = np.array([0.15, 0.65, 0.15])
         for agent in world.agents:
             agent.goal_a = goal
         # set random initial states
         for agent in world.agents:
-            agent.state.p_pos = np.random.uniform(-1, +1, world.dim_p)
+            agent.state.p_pos = self.np_random.uniform(-1, +1, world.dim_p)
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
         for i, landmark in enumerate(world.landmarks):
-            landmark.state.p_pos = np.random.uniform(-1, +1, world.dim_p)
+            landmark.state.p_pos = self.np_random.uniform(-1, +1, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
 
     def benchmark_data(self, agent, world):

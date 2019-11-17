@@ -13,7 +13,8 @@ class MultiAgentEnv(gym.Env):
 
     def __init__(self, world, reset_callback=None, reward_callback=None,
                  observation_callback=None, info_callback=None,
-                 done_callback=None, shared_viewer=True, update_callback=None):
+                 done_callback=None, shared_viewer=True, 
+                 update_callback=None, show_visual_range=False):
 
         self.world = world
         self.agents = self.world.policy_agents
@@ -25,7 +26,11 @@ class MultiAgentEnv(gym.Env):
         self.observation_callback = observation_callback
         self.info_callback = info_callback
         self.done_callback = done_callback
+
+        # customized 
         self.update_callback = update_callback
+        self.show_visual_range = show_visual_range
+
         # environment parameters
         self.discrete_action_space = True
         # if true, action is a number 0...N, otherwise action is a one-hot N-dimensional vector
@@ -65,9 +70,10 @@ class MultiAgentEnv(gym.Env):
                 self.action_space.append(act_space)
             else:
                 self.action_space.append(total_action_space[0])
+            # TODO: !!! obs disabled 
             # observation space
-            obs_dim = len(observation_callback(agent, self.world))
-            self.observation_space.append(spaces.Box(low=-np.inf, high=+np.inf, shape=(obs_dim,), dtype=np.float32))
+            # obs_dim = len(observation_callback(agent, self.world))
+            # self.observation_space.append(spaces.Box(low=-np.inf, high=+np.inf, shape=(obs_dim,), dtype=np.float32))
             agent.action.c = np.zeros(self.world.dim_c)
 
         # rendering
@@ -234,16 +240,36 @@ class MultiAgentEnv(gym.Env):
             from multiagent import rendering
             self.render_geoms = []
             self.render_geoms_xform = []
+            
+            # VIS: show visual range/receptor field
+            self.vis_render_geoms = []
+            self.vis_render_geoms_xform = []
+
             for entity in self.world.entities:
                 geom = rendering.make_circle(entity.size)
                 xform = rendering.Transform()
                 if 'agent' in entity.name:
-                    geom.set_color(*entity.color, alpha=0.5)
+                    # geom.set_color(*entity.color, alpha=0.5)
+                    geom.set_color(*entity.color)   # agent on top
                 else:
-                    geom.set_color(*entity.color)
+                    # geom.set_color(*entity.color)
+                    geom.set_color(*entity.color, alpha=0.5)    # entity to background 
                 geom.add_attr(xform)
                 self.render_geoms.append(geom)
                 self.render_geoms_xform.append(xform)
+
+                # VIS: show visual range/receptor field
+                if 'agent' in entity.name and self.show_visual_range:
+                    vis_range = entity.vision_range * entity.size
+                    vis_geom = rendering.make_circle(vis_range)
+                    vis_xform = rendering.Transform()
+                    vis_geom.set_color(*entity.color, alpha=0.2)
+                    vis_geom.add_attr(vis_xform)
+                    self.vis_render_geoms.append(vis_geom)
+                    self.vis_render_geoms_xform.append(vis_xform)
+                else:
+                    self.vis_render_geoms.append(None)
+                    self.vis_render_geoms_xform.append(None)
 
             # add geoms to viewer
             for viewer in self.viewers:
@@ -251,23 +277,33 @@ class MultiAgentEnv(gym.Env):
                 for geom in self.render_geoms:
                     viewer.add_geom(geom)
 
+                # VIS: show visual range/receptor field
+                for vis_geom in self.vis_render_geoms:
+                    if vis_geom is not None:
+                        viewer.add_geom(vis_geom)
+
         results = []
         for i in range(len(self.viewers)):
             from multiagent import rendering
             # update bounds to center around agent
             # cam_range = 1
-            cam_range = 5
+            cam_range = 10
             if self.shared_viewer:
                 pos = np.zeros(self.world.dim_p)
             else:
                 pos = self.agents[i].state.p_pos
-            self.viewers[i].set_bounds(pos[0]-cam_range,pos[0]+cam_range,pos[1]-cam_range,pos[1]+cam_range)
+            # self.viewers[i].set_bounds(pos[0]-cam_range,pos[0]+cam_range,pos[1]-cam_range,pos[1]+cam_range)
+            self.viewers[i].set_bounds(-cam_range, cam_range, -cam_range, cam_range)
             # update geometry positions
             for e, entity in enumerate(self.world.entities):
                 self.render_geoms_xform[e].set_translation(*entity.state.p_pos)
+
+                # VIS: show visual range/receptor field
+                if self.vis_render_geoms_xform[e] is not None:
+                    self.vis_render_geoms_xform[e].set_translation(*entity.state.p_pos)
+
             # render to display or array
             results.append(self.viewers[i].render(return_rgb_array = mode=='rgb_array'))
-
         return results
 
     # create receptor field locations in local coordinate frame
