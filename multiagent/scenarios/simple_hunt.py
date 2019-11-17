@@ -1,6 +1,6 @@
 import numpy as np
-from ..core import World, entity2idx, SkilledAgent, Landmark, Mine
-from ..scenario import BaseScenario
+from multiagent.core import World, entity2idx, SkilledAgent, Landmark, Mine
+from multiagent.scenario import BaseScenario
 
 
 class Scenario(BaseScenario):
