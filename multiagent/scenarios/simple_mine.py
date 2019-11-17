@@ -28,7 +28,7 @@ class Scenario(BaseScenario):
             # temporary skill allocations
             agent.vision_range = np.random.uniform(1, agent.skill_points)
             agent.max_speed = agent.skill_points - agent.vision_range
-            self.change_entity_attribute(landmark, **kwargs)
+            self.change_entity_attribute(agent, **kwargs)
             
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]

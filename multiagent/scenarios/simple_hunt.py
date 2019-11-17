@@ -36,7 +36,7 @@ class Scenario(BaseScenario):
             agent.max_speed = agent.skill_points - agent.vision_range
             if agent.adversary:
                 agent.max_speed /= 10
-            self.change_entity_attribute(landmark, **kwargs)
+            self.change_entity_attribute(agent, **kwargs)
             
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]
