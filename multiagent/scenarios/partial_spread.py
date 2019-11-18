@@ -11,7 +11,6 @@ class Scenario(BaseScenario):
         world.np_random = self.np_random
         # set any world properties first
         world.collaborative = True
-        # all entity positions are scaled/extended by size 
         world.size = kwargs.get("world_size", 1)
         world.dim_c = kwargs.get("dim_c", 2)
         num_agents = kwargs.get("num_agents", 3)
@@ -22,8 +21,23 @@ class Scenario(BaseScenario):
         for i, agent in enumerate(world.agents):
             agent.name = 'agent %d' % i
             agent.collide = True
-            agent.silent = True
-            agent.size = 0.05
+            agent.silent = False
+            agent.size = 0.025
+
+            # temporary skill allocations
+            # agent.vision_range = np.random.uniform(1, agent.skill_points)  
+            # agent.max_speed = agent.skill_points - agent.vision_range
+
+            # vision range is how much further can agent see outside of its own area 
+            min_vis, max_vis = 5*agent.size, 0.5*world.size
+            vis_ratio = np.random.randint(1, agent.skill_points) / agent.skill_points
+            agent.vision_range = min_vis + (max_vis - min_vis) * vis_ratio
+            # acceleration, applied to scale action force  
+            min_accel, max_accel = 0, 1
+            if agent.accel is None:
+                agent.accel = 1.0
+            agent.accel *= min_accel + (max_accel - min_accel) * (1-vis_ratio)
+
             self.change_entity_attribute(agent, **kwargs)
         
         # add landmarks
@@ -32,7 +46,7 @@ class Scenario(BaseScenario):
             landmark.name = 'landmark %d' % i
             landmark.collide = False
             landmark.movable = False
-            landmark.size = 0.15
+            landmark.size = 0.075
             self.change_entity_attribute(landmark, **kwargs)
 
         # make initial conditions
@@ -43,7 +57,7 @@ class Scenario(BaseScenario):
         # random properties for agents
         for i, agent in enumerate(world.agents):
             agent.color = np.array([0.35, 0.35, 0.85])
-
+            
         # random properties for landmarks
         for i, landmark in enumerate(world.landmarks):
             landmark.color = np.array([0.25, 0.25, 0.25])
@@ -98,21 +112,29 @@ class Scenario(BaseScenario):
         return rew
 
     def observation(self, agent, world):
-        # get positions of all entities in this agent's reference frame
+        """ agent obs with partial observation 
+        """
         entity_pos = []
-        for entity in world.landmarks:  # world.entities:
-            entity_pos.append(entity.state.p_pos - agent.state.p_pos)
-        # entity colors
         entity_color = []
         for entity in world.landmarks:  # world.entities:
-            entity_color.append(entity.color)
+            # relative position 
+            e_pos = entity.state.p_pos - agent.state.p_pos
+            # zero mask out entities not in agent signt 
+            e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + entity.size else 0
+            entity_pos.append(e_pos * e_mask)
+            # entity colors
+            entity_color.append(entity.color * e_mask)
         # communication of all other agents
         comm = []
         other_pos = []
         for other in world.agents:
             if other is agent: continue
+            e_pos = other.state.p_pos - agent.state.p_pos
+            e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + other.size else 0
             comm.append(other.state.c)
-            other_pos.append(other.state.p_pos - agent.state.p_pos)
+            other_pos.append(e_pos * e_mask)
         return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
 
-    
+
+
+

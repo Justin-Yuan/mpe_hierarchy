@@ -1,0 +1,11 @@
+# world configs 
+world_size: 1
+dim_p: 2
+dim_c: 2 
+num_agents: 6
+num_landmarks: 3
+# entity configs
+agent_pos_init: [uniform, -1, 1]
+landmark_pos_init: [uniform, -1, 1]
+
+

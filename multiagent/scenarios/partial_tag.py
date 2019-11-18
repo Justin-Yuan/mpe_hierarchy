@@ -28,6 +28,17 @@ class Scenario(BaseScenario):
             agent.accel = 3.0 if agent.adversary else 4.0
             #agent.accel = 20.0 if agent.adversary else 25.0
             agent.max_speed = 1.0 if agent.adversary else 1.3
+
+            # vision range is how much further can agent see outside of its own area 
+            min_vis, max_vis = 5*agent.size, 0.5*world.size
+            vis_ratio = np.random.randint(1, agent.skill_points) / agent.skill_points
+            agent.vision_range = min_vis + (max_vis - min_vis) * vis_ratio
+            # acceleration, applied to scale action force  
+            min_accel, max_accel = 0, 1
+            if agent.accel is None:
+                agent.accel = 1.0
+            agent.accel *= min_accel + (max_accel - min_accel) * (1-vis_ratio)
+
             self.change_entity_attribute(agent, **kwargs)
         
         # add landmarks
@@ -144,15 +155,21 @@ class Scenario(BaseScenario):
         entity_pos = []
         for entity in world.landmarks:
             if not entity.boundary:
-                entity_pos.append(entity.state.p_pos - agent.state.p_pos)
+                # relative position 
+                e_pos = entity.state.p_pos - agent.state.p_pos
+                # zero mask out entities not in agent signt 
+                e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + entity.size else 0
+                entity_pos.append(e_pos * e_mask)
         # communication of all other agents
         comm = []
         other_pos = []
         other_vel = []
         for other in world.agents:
             if other is agent: continue
+            e_pos = other.state.p_pos - agent.state.p_pos
+            e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + other.size else 0
             comm.append(other.state.c)
-            other_pos.append(other.state.p_pos - agent.state.p_pos)
+            other_pos.append(e_pos * e_mask)
             if not other.adversary:
-                other_vel.append(other.state.p_vel)
+                other_vel.append(other.state.p_vel * e_mask)
         return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + other_vel)

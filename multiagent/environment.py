@@ -14,7 +14,7 @@ class MultiAgentEnv(gym.Env):
     def __init__(self, world, reset_callback=None, reward_callback=None,
                  observation_callback=None, info_callback=None,
                  done_callback=None, shared_viewer=True, 
-                 update_callback=None, show_visual_range=False):
+                 update_callback=None, show_visual_range=False, cam_range=1):
 
         self.world = world
         self.agents = self.world.policy_agents
@@ -30,8 +30,10 @@ class MultiAgentEnv(gym.Env):
         # customized 
         self.update_callback = update_callback
         self.show_visual_range = show_visual_range
+        self.cam_range = cam_range
 
         # environment parameters
+        # action space is Discrete or Box (both u and c)
         self.discrete_action_space = True
         # if true, action is a number 0...N, otherwise action is a one-hot N-dimensional vector
         self.discrete_action_input = False
@@ -219,11 +221,13 @@ class MultiAgentEnv(gym.Env):
                     agent.action.u[1] += action[0][3] - action[0][4]
                 else:
                     agent.action.u = action[0]
+
             sensitivity = 5.0
             if agent.accel is not None:
                 sensitivity = agent.accel
             agent.action.u *= sensitivity
             action = action[1:]
+
         if not agent.silent:
             # communication action
             if self.discrete_action_input:
@@ -232,6 +236,7 @@ class MultiAgentEnv(gym.Env):
             else:
                 agent.action.c = action[0]
             action = action[1:]
+
         # make sure we used all elements of action
         assert len(action) == 0
 
@@ -291,7 +296,7 @@ class MultiAgentEnv(gym.Env):
 
                 # VIS: show visual range/receptor field
                 if 'agent' in entity.name and self.show_visual_range:
-                    vis_range = entity.vision_range * entity.size
+                    vis_range = entity.vision_range 
                     vis_geom = rendering.make_circle(vis_range)
                     vis_xform = rendering.Transform()
                     vis_geom.set_color(*entity.color, alpha=0.2)
@@ -318,7 +323,7 @@ class MultiAgentEnv(gym.Env):
             from multiagent import rendering
             # update bounds to center around agent
             # cam_range = 1
-            cam_range = 10
+            cam_range = self.cam_range
             if self.shared_viewer:
                 pos = np.zeros(self.world.dim_p)
             else:

@@ -1,5 +1,5 @@
 import numpy as np
-from multiagent.core import World, SkilledAgent, Landmark
+from multiagent.core import World, Agent, Landmark
 from multiagent.scenario import BaseScenario
 
 
@@ -10,20 +10,18 @@ class Scenario(BaseScenario):
         world = World()
         world.np_random = self.np_random
         # set any world properties first
+        world.dim_c = 2
+        num_agents = 3
+        num_landmarks = 3
         world.collaborative = True
-        # all entity positions are scaled/extended by size 
-        world.size = kwargs.get("world_size", 1)
-        world.dim_c = kwargs.get("dim_c", 2)
-        num_agents = kwargs.get("num_agents", 3)
-        num_landmarks = kwargs.get("num_landmarks", 3)
 
         # add agents
-        world.agents = [SkilledAgent() for _ in range(num_agents)]
+        world.agents = [Agent() for _ in range(num_agents)]
         for i, agent in enumerate(world.agents):
             agent.name = 'agent %d' % i
             agent.collide = True
             agent.silent = True
-            agent.size = 0.05
+            agent.size = 0.15
             self.change_entity_attribute(agent, **kwargs)
         
         # add landmarks
@@ -32,32 +30,26 @@ class Scenario(BaseScenario):
             landmark.name = 'landmark %d' % i
             landmark.collide = False
             landmark.movable = False
-            landmark.size = 0.15
             self.change_entity_attribute(landmark, **kwargs)
 
         # make initial conditions
-        self.reset_world(world, **kwargs)
+        self.reset_world(world)
         return world
 
-    def reset_world(self, world, **kwargs):
+    def reset_world(self, world):
         # random properties for agents
         for i, agent in enumerate(world.agents):
             agent.color = np.array([0.35, 0.35, 0.85])
-
         # random properties for landmarks
         for i, landmark in enumerate(world.landmarks):
             landmark.color = np.array([0.25, 0.25, 0.25])
-            
         # set random initial states
         for agent in world.agents:
-            pos_min, pos_max = kwargs.get("agent_pos_init", [0,-1,1])[1:]
-            agent.state.p_pos = self.np_random.uniform(pos_min, pos_max, world.dim_p)
+            agent.state.p_pos = self.np_random.uniform(-1, +1, world.dim_p)
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
-
         for i, landmark in enumerate(world.landmarks):
-            pos_min, pos_max = kwargs.get("landmark_pos_init", [0,-1,1])[1:]
-            landmark.state.p_pos = self.np_random.uniform(pos_min, pos_max, world.dim_p)
+            landmark.state.p_pos = self.np_random.uniform(-1, +1, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
 
     def benchmark_data(self, agent, world):
@@ -114,5 +106,3 @@ class Scenario(BaseScenario):
             comm.append(other.state.c)
             other_pos.append(other.state.p_pos - agent.state.p_pos)
         return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
-
-    

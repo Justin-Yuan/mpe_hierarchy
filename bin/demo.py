@@ -3,6 +3,7 @@ import os
 import sys
 # sys.path.insert(1, os.path.join(sys.path[0], '..'))
 import argparse
+import yaml 
 
 import cv2 
 from cv2 import VideoWriter
@@ -89,20 +90,30 @@ def savegif(arrs, output="demo.gif"):
     imageio.mimsave(output, arrs)
 
 
+def load_config(config_file):
+    if len(config_file) < 1 or not os.path.exists(config_file):
+        return {}
+    with open(config_file, "r") as f:
+        config = yaml.load(f)
+    return config 
+
+
+
 ##################################################################################
 
-def main(game="mine"):
+def main(args, **kwargs):
     """ entry function 
     """
     # load scenario from script
     scenario = scenarios.load(args.scenario).Scenario()
     # create world
-    world = scenario.make_world()
+    world = scenario.make_world(**kwargs)
     # create multiagent environment
     # env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, info_callback=None, shared_viewer = False)
+    world_update_callback = getattr(scenario, "update_world", None)
     env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, 
-        info_callback=None, shared_viewer=True, 
-        update_callback=scenario.update_world, show_visual_range=True)
+        info_callback=None, shared_viewer=args.share_viewer, 
+        update_callback=world_update_callback, show_visual_range=True, cam_range=args.cam_range)
     # render call to create viewer window (necessary only for interactive policies)
 
     game = args.game
@@ -139,7 +150,7 @@ def main(game="mine"):
         count += 1
         print(count)
         print(reward_n)
-        if count > args.length: break 
+        if args.length > 0 and count > args.length: break 
 
     # save demo video
     # save_video(frames, output=args.output) 
@@ -153,9 +164,13 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--game', default='interactive', help='type of policy to try')
     parser.add_argument('-o', '--output', default="demo.gif", help='output name of demo video')
     parser.add_argument('-l', '--length', default=100, type=int, help='length of demo video')
+    parser.add_argument('--share_viewer', action='store_true', default=False, help="if to share rendering viewer")
+    parser.add_argument('-c', '--config', default="", help='Path of the environment config file')
+    parser.add_argument('--cam_range', default=10, type=int, help='viewer size when rendering')
     args = parser.parse_args()
     # run main 
-    main(args)
+    config = load_config(args.config)
+    main(args, **config)
 
 
 
