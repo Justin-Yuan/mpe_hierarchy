@@ -133,7 +133,11 @@ class Scenario(BaseScenario):
             e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + other.size else 0
             comm.append(other.state.c)
             other_pos.append(e_pos * e_mask)
-        return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
+        # return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
+        
+        # plus agent's own attributs 
+        self_attr = [agent.size, agent.vision_range, agent.accel]
+        return np.concatenate(self_attr + [agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
 
 
 

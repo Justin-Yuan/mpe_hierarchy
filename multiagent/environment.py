@@ -34,7 +34,8 @@ class MultiAgentEnv(gym.Env):
 
         # environment parameters
         # action space is Discrete or Box (both u and c)
-        self.discrete_action_space = True
+        # self.discrete_action_space = True
+        self.discrete_action_space = False
         # if true, action is a number 0...N, otherwise action is a one-hot N-dimensional vector
         self.discrete_action_input = False
         # if true, even the action is continuous, action will be performed discretely
@@ -196,6 +197,18 @@ class MultiAgentEnv(gym.Env):
             size = action_space.high - action_space.low + 1
             index = 0
             for s in size:
+                act.append(action[index:(index+s)])
+                index += s
+            action = act
+        elif isinstance(action, spaces.Tuple):
+            # action is a concatenated array
+            act = []
+            index = 0 
+            for space in action_space.spaces:
+                if isinstance(space, spaces.Discrete):
+                    s = 1 if self.discrete_action_input else space.n 
+                else:   # default to Box 
+                    s = space.shape[0]
                 act.append(action[index:(index+s)])
                 index += s
             action = act

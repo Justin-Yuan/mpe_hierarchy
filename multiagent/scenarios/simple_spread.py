@@ -23,7 +23,7 @@ class Scenario(BaseScenario):
             agent.name = 'agent %d' % i
             agent.collide = True
             agent.silent = True
-            agent.size = 0.05
+            agent.size = 0.025
             self.change_entity_attribute(agent, **kwargs)
         
         # add landmarks
@@ -32,7 +32,7 @@ class Scenario(BaseScenario):
             landmark.name = 'landmark %d' % i
             landmark.collide = False
             landmark.movable = False
-            landmark.size = 0.15
+            landmark.size = 0.075
             self.change_entity_attribute(landmark, **kwargs)
 
         # make initial conditions
