@@ -172,4 +172,9 @@ class Scenario(BaseScenario):
             other_pos.append(e_pos * e_mask)
             if not other.adversary:
                 other_vel.append(other.state.p_vel * e_mask)
-        return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + other_vel)
+        # return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + other_vel)
+
+        # plus agent's own attributs 
+        self_attr = np.array([agent.size, agent.vision_range, agent.accel])
+        return np.concatenate([self_attr] + [agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + other_vel + comm)
+

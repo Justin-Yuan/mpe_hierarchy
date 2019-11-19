@@ -134,10 +134,10 @@ class Scenario(BaseScenario):
             comm.append(other.state.c)
             other_pos.append(e_pos * e_mask)
         # return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
-        
+
         # plus agent's own attributs 
-        self_attr = [agent.size, agent.vision_range, agent.accel]
-        return np.concatenate(self_attr + [agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
+        self_attr = np.array([agent.size, agent.vision_range, agent.accel])
+        return np.concatenate([self_attr] + [agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
 
 
 
