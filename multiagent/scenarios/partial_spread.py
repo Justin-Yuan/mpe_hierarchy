@@ -6,11 +6,11 @@ from multiagent.scenario import BaseScenario
 class Scenario(BaseScenario):
     def make_world(self, **kwargs):
         self.before_make_world(**kwargs)
-        # cache kwargs in case needed in Env wrapper 
-        self.config = kwargs
 
         world = World()
         world.np_random = self.np_random
+        # cache kwargs in case needed in Env wrapper 
+        world.config = kwargs
         # set any world properties first
         world.collaborative = True
         world.size = kwargs.get("world_size", 1)
