@@ -68,8 +68,7 @@ class MultiAgentEnv(gym.Env):
                 if all([isinstance(act_space, spaces.Discrete) for act_space in total_action_space]):
                     act_space = MultiDiscrete([[0, act_space.n - 1] for act_space in total_action_space])
                 else:
-                    # act_space = spaces.Tuple(total_action_space)
-                    act_space = spaces.MultiSpace(total_action_space)
+                    act_space = MultiSpace(total_action_space)
                 self.action_space.append(act_space)
             else:
                 self.action_space.append(total_action_space[0])
@@ -107,7 +106,7 @@ class MultiAgentEnv(gym.Env):
                     assert len(v) > 0
                     n, state_dim = len(v), len(v[0])
                     # list of continuous agetn states (from perspective of current agent)
-                    space = spaces.MultiSpace((
+                    space = MultiSpace((
                         spaces.Box(low=-np.inf, high=+np.inf, shape=(state_dim,), dtype=np.float32) 
                         for _ in range(n)
                     ))
@@ -200,7 +199,7 @@ class MultiAgentEnv(gym.Env):
                 act.append(action[index:(index+s)])
                 index += s
             action = act
-        elif isinstance(action, spaces.MultiSpace):
+        elif isinstance(action_space, MultiSpace):
             # action is a concatenated array
             index, act = 0, []
             for space in action_space.spaces:
