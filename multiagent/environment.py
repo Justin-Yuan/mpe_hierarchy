@@ -2,7 +2,7 @@ import gym
 from gym import spaces
 from gym.envs.registration import EnvSpec
 import numpy as np
-from multiagent.multi_discrete import MultiDiscrete
+from multiagent.multi_discrete import MultiDiscrete, MultiSpace 
 
 # environment for all agents in the multiagent world
 # currently code assumes that no agents will be created/destroyed at runtime!
@@ -34,12 +34,11 @@ class MultiAgentEnv(gym.Env):
 
         # environment parameters
         # action space is Discrete or Box (both u and c)
-        # self.discrete_action_space = True
-        self.discrete_action_space = False
+        self.discrete_action_space = getattr(world.config, "discrete_action_space", False)
         # if true, action is a number 0...N, otherwise action is a one-hot N-dimensional vector
-        self.discrete_action_input = False
+        self.discrete_action_input = getattr(world.config, "discrete_action_input", False)
         # if true, even the action is continuous, action will be performed discretely
-        self.force_discrete_action = world.discrete_action if hasattr(world, 'discrete_action') else False
+        self.force_discrete_action = getattr(world.config, "discrete_action", False)
         # if true, every agent has the same reward
         self.shared_reward = world.collaborative if hasattr(world, 'collaborative') else False
         self.time = 0
@@ -69,7 +68,8 @@ class MultiAgentEnv(gym.Env):
                 if all([isinstance(act_space, spaces.Discrete) for act_space in total_action_space]):
                     act_space = MultiDiscrete([[0, act_space.n - 1] for act_space in total_action_space])
                 else:
-                    act_space = spaces.Tuple(total_action_space)
+                    # act_space = spaces.Tuple(total_action_space)
+                    act_space = spaces.MultiSpace(total_action_space)
                 self.action_space.append(act_space)
             else:
                 self.action_space.append(total_action_space[0])
@@ -107,7 +107,7 @@ class MultiAgentEnv(gym.Env):
                     assert len(v) > 0
                     n, state_dim = len(v), len(v[0])
                     # list of continuous agetn states (from perspective of current agent)
-                    space = spaces.Tuple((
+                    space = spaces.MultiSpace((
                         spaces.Box(low=-np.inf, high=+np.inf, shape=(state_dim,), dtype=np.float32) 
                         for _ in range(n)
                     ))
@@ -200,20 +200,17 @@ class MultiAgentEnv(gym.Env):
                 act.append(action[index:(index+s)])
                 index += s
             action = act
-        elif isinstance(action, spaces.Tuple):
-            # # action is a concatenated array
-            # act = []
-            # index = 0 
-            # for space in action_space.spaces:
-            #     if isinstance(space, spaces.Discrete):
-            #         s = 1 if self.discrete_action_input else space.n 
-            #     else:   # default to Box 
-            #         s = space.shape[0]
-            #     act.append(action[index:(index+s)])
-            #     index += s
-            # action = act
-            # already a tuple 
-            action = action 
+        elif isinstance(action, spaces.MultiSpace):
+            # action is a concatenated array
+            index, act = 0, []
+            for space in action_space.spaces:
+                if isinstance(space, spaces.Discrete):
+                    s = 1 if self.discrete_action_input else space.n 
+                else:   # default to Box 
+                    s = space.shape[0]
+                act.append(action[index:index+s])
+                index += s
+            action = act
         else:
             action = [action]
 

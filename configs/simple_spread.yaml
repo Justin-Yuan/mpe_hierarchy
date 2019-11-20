@@ -1,4 +1,5 @@
 # world configs 
+discrete_action: false 
 world_size: 1
 dim_p: 2
 dim_c: 2 
