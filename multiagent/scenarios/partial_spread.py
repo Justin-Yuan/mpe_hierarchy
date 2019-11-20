@@ -23,7 +23,7 @@ class Scenario(BaseScenario):
         for i, agent in enumerate(world.agents):
             agent.name = 'agent %d' % i
             agent.collide = True
-            agent.silent = False
+            agent.silent = kwargs.get("agent_silence", True)
             agent.size = 0.025
 
             # temporary skill allocations

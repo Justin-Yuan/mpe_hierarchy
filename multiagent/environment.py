@@ -34,11 +34,11 @@ class MultiAgentEnv(gym.Env):
 
         # environment parameters
         # action space is Discrete or Box (both u and c)
-        self.discrete_action_space = getattr(world.config, "discrete_action_space", False)
+        self.discrete_action_space = world.config.get("discrete_action_space", False)
         # if true, action is a number 0...N, otherwise action is a one-hot N-dimensional vector
-        self.discrete_action_input = getattr(world.config, "discrete_action_input", False)
+        self.discrete_action_input = world.config.get("discrete_action_input", False)
         # if true, even the action is continuous, action will be performed discretely
-        self.force_discrete_action = getattr(world.config, "discrete_action", False)
+        self.force_discrete_action = world.config.get("discrete_action", False)
         # if true, every agent has the same reward
         self.shared_reward = world.collaborative if hasattr(world, 'collaborative') else False
         self.time = 0
@@ -187,7 +187,7 @@ class MultiAgentEnv(gym.Env):
         return self.reward_callback(agent, self.world)
 
     # set env action for a particular agent
-    def _set_action(self, action, agent, action_space, time=None):
+    def _set_action(self, action, agent, action_space, time=None):        
         agent.action.u = np.zeros(self.world.dim_p)
         agent.action.c = np.zeros(self.world.dim_c)
         # process action
