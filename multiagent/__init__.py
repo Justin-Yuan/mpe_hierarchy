@@ -63,5 +63,5 @@ def make_env(scenario_name, benchmark=False, **kwargs):
                  scenario.benchmark_data, update_callback=world_update_callback)
     else:
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation,
-                update_callback=world_update_callback)
+                update_callback=world_update_callback, show_visual_range=True)
     return env

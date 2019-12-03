@@ -12,4 +12,16 @@ agent_pos_init: [uniform, -1, 1]
 landmark_pos_init: [uniform, -1, 1]
 agent_collide: true 
 agent_silence: true  
+# entity change fns 
+agent_config:
+  # change_fn: agent_set_skills_local
+  change_fn: agent_set_skills_global
+  vis_ratios: [0.2, 0.5, 0.8]
+# model config
+graph_critic:
+  embed_size: 64
+  embed_act: ReLU 
+  hiddens: [64, 64, 64]
+  num_heads: [1, 1, 1]
+
 

@@ -30,17 +30,17 @@ class Scenario(BaseScenario):
             # agent.vision_range = np.random.uniform(1, agent.skill_points)  
             # agent.max_speed = agent.skill_points - agent.vision_range
 
-            # vision range is how much further can agent see outside of its own area 
-            min_vis, max_vis = 5*agent.size, 0.5*world.size
-            vis_ratio = np.random.randint(1, agent.skill_points) / agent.skill_points
-            agent.vision_range = min_vis + (max_vis - min_vis) * vis_ratio
-            # acceleration, applied to scale action force  
-            min_accel, max_accel = 0, 1
-            if agent.accel is None:
-                agent.accel = 1.0
-            agent.accel *= min_accel + (max_accel - min_accel) * (1-vis_ratio)
+            # # vision range is how much further can agent see outside of its own area 
+            # min_vis, max_vis = 5*agent.size, 0.5*world.size
+            # vis_ratio = np.random.randint(1, agent.skill_points) / agent.skill_points
+            # agent.vision_range = min_vis + (max_vis - min_vis) * vis_ratio
+            # # acceleration, applied to scale action force  
+            # min_accel, max_accel = 0, 1
+            # if agent.accel is None:
+            #     agent.accel = 1.0
+            # agent.accel *= min_accel + (max_accel - min_accel) * (1-vis_ratio)
 
-            self.change_entity_attribute(agent, **kwargs)
+            self.change_entity_attribute(agent, world, **kwargs)
         
         # add landmarks
         world.landmarks = [Landmark() for _ in range(num_landmarks)]
@@ -49,7 +49,7 @@ class Scenario(BaseScenario):
             landmark.collide = False
             landmark.movable = False
             landmark.size = 0.075
-            self.change_entity_attribute(landmark, **kwargs)
+            self.change_entity_attribute(landmark, world, **kwargs)
 
         # make initial conditions
         self.reset_world(world, **kwargs)
