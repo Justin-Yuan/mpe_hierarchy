@@ -183,14 +183,22 @@ class World(object):
                     entity.state.p_vel = entity.state.p_vel / np.sqrt(np.square(entity.state.p_vel[0]) +
                                                                   np.square(entity.state.p_vel[1])) * entity.max_speed
             entity.state.p_pos += entity.state.p_vel * self.dt
+            # clipping 
+            self.clip_to_env_bound(entity)
+
+    # constrain agent in world bounds 
+    def clip_to_env_bound(self, entity):
+        cur_pos = entity.state.p_pos
+        entity.state.p_pos = np.maximum(np.minimum(cur_pos, self.size), -self.size)
 
     def update_agent_state(self, agent):
         # set communication state (directly for now)
         if agent.silent:
             agent.state.c = np.zeros(self.dim_c)
         else:
-            noise = self.np_random.randn(*agent.action.c.shape) * agent.c_noise if agent.c_noise else 0.0
-            agent.state.c = agent.action.c + noise      
+            # noise = self.np_random.randn(*agent.action.c.shape) * agent.c_noise if agent.c_noise else 0.0
+            # agent.state.c = agent.action.c + noise      
+            agent.state.c = agent.action.c
 
     # get collision forces for any contact between two entities
     def get_collision_force(self, entity_a, entity_b):
@@ -206,7 +214,8 @@ class World(object):
         # softmax penetration
         k = self.contact_margin
         penetration = np.logaddexp(0, -(dist - dist_min)/k)*k
-        force = self.contact_force * delta_pos / dist * penetration
+        # force = self.contact_force * delta_pos / dist * penetration
+        force = self.contact_force * delta_pos / max(dist, 1e-4) * penetration
         force_a = +force if entity_a.movable else None
         force_b = -force if entity_b.movable else None
         return [force_a, force_b]

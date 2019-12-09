@@ -11,6 +11,7 @@ if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser(description=None)
     parser.add_argument('-s', '--scenario', default='simple.py', help='Path of the scenario Python script.')
+    parser.add_argument('--show_visual_range', action='store_true', default=False, help="if to show agent vision in rendering")
     args = parser.parse_args()
 
     # load scenario from script
@@ -20,7 +21,8 @@ if __name__ == '__main__':
     # create multiagent environment
     # env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, info_callback=None, shared_viewer = False)
     env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, 
-        info_callback=None, shared_viewer=True, update_callback=scenario.update_world)
+        info_callback=None, shared_viewer=True, update_callback=scenario.update_world, 
+        show_visual_range=args.show_visual_range)
     # render call to create viewer window (necessary only for interactive policies)
 
     env.render()

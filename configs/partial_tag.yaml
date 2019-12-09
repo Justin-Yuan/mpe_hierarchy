@@ -5,8 +5,9 @@ discrete_action: false
 world_size: 1
 dim_p: 2
 dim_c: 2 
-num_agents: 3
-num_landmarks: 3
+num_good_agents: 1
+num_adversaries: 3
+num_landmarks: 2
 # entity configs
 agent_pos_init: [uniform, -1, 1]
 landmark_pos_init: [uniform, -1, 1]
@@ -17,5 +18,5 @@ agent_config:
   # change_fn: agent_set_skills_local
   # change_fn: agent_set_skills_global
   change_fn: agent_set_vision_global
-  vis_ratios: [0.5, 0.5, 1.5]
+  vis_ratios: [0.2, 0.5, 0.8]
 

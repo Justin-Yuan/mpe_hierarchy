@@ -5,7 +5,8 @@ discrete_action: false
 world_size: 1
 dim_p: 2
 dim_c: 2 
-num_agents: 3
+num_good_agents: 1
+num_adversaries: 3
 num_landmarks: 3
 # entity configs
 agent_pos_init: [uniform, -1, 1]
@@ -15,13 +16,17 @@ agent_silence: true
 # entity change fns 
 agent_config:
   # change_fn: agent_set_skills_local
-  change_fn: agent_set_skills_global
+  # change_fn: agent_set_skills_global
+  change_fn: agent_set_vision_global
   vis_ratios: [0.2, 0.5, 0.8]
 # model config
 graph_critic:
+  output_level: graph   # node 
   embed_size: 64
   embed_act: ReLU 
   hiddens: [64, 64, 64]
   num_heads: [1, 1, 1]
+  dropout: 0.0 
+
 
 

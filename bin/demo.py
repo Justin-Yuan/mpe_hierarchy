@@ -113,7 +113,8 @@ def main(args, **kwargs):
     world_update_callback = getattr(scenario, "update_world", None)
     env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation, 
         info_callback=None, shared_viewer=args.share_viewer, 
-        update_callback=world_update_callback, show_visual_range=True, cam_range=args.cam_range)
+        update_callback=world_update_callback, 
+        show_visual_range=args.show_visual_range, cam_range=args.cam_range)
     # render call to create viewer window (necessary only for interactive policies)
 
     game = args.game
@@ -167,6 +168,8 @@ if __name__ == '__main__':
     parser.add_argument('--share_viewer', action='store_true', default=False, help="if to share rendering viewer")
     parser.add_argument('-c', '--config', default="", help='Path of the environment config file')
     parser.add_argument('--cam_range', default=10, type=int, help='viewer size when rendering')
+    parser.add_argument('--show_visual_range', action='store_true', default=False, help="if to show agent vision in rendering")
+
     args = parser.parse_args()
     # run main 
     config = load_config(args.config)

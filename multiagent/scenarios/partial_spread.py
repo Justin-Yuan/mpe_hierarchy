@@ -1,6 +1,7 @@
 import numpy as np
 from multiagent.core import World, SkilledAgent, Landmark
 from multiagent.scenario import BaseScenario
+from multiagent.utils import bound_reward
 
 
 class Scenario(BaseScenario):
@@ -111,6 +112,9 @@ class Scenario(BaseScenario):
             for a in world.agents:
                 if self.is_collision(a, agent):
                     rew -= 1
+
+        # # agents are penalized for exiting the screen, so that they can be caught by the adversaries
+        # rew += bound_reward(agent, world)
         return rew
 
     def observation(self, agent, world):
@@ -122,7 +126,8 @@ class Scenario(BaseScenario):
             # relative position 
             e_pos = entity.state.p_pos - agent.state.p_pos
             # zero mask out entities not in agent signt 
-            e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + entity.size else 0
+            # e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + entity.size else 0
+            e_mask = 1
             entity_pos.append(e_pos * e_mask)
             # entity colors
             entity_color.append(entity.color * e_mask)
@@ -132,13 +137,19 @@ class Scenario(BaseScenario):
         for other in world.agents:
             if other is agent: continue
             e_pos = other.state.p_pos - agent.state.p_pos
-            e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + other.size else 0
+            # e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + other.size else 0
+            e_mask = 1
             comm.append(other.state.c)
             other_pos.append(e_pos * e_mask)
         # return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
 
         # plus agent's own attributs 
-        self_attr = np.array([agent.size, agent.vision_range, agent.accel])
+        self_attr = []
+        for attr_name in ["size", "vision_range", "accel"]:
+            attr = getattr(agent, attr_name, 0)
+            self_attr.append(attr if attr is not None else 0)
+        self_attr = np.array(self_attr)
+
         return np.concatenate([self_attr] + [agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
 
 

@@ -1,6 +1,7 @@
 import numpy as np
 from multiagent.core import World, SkilledAgent, Landmark
 from multiagent.scenario import BaseScenario
+from multiagent.utils import bound_reward
 
 
 class Scenario(BaseScenario):
@@ -97,6 +98,9 @@ class Scenario(BaseScenario):
             for a in world.agents:
                 if self.is_collision(a, agent):
                     rew -= 1
+
+        # # agents are penalized for exiting the screen, so that they can be caught by the adversaries
+        # rew += bound_reward(agent, world)   # bound reward already negative
         return rew
 
     def observation(self, agent, world):

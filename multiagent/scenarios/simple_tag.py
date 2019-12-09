@@ -1,6 +1,7 @@
 import numpy as np
 from multiagent.core import World, Agent, Landmark
 from multiagent.scenario import BaseScenario
+from multiagent.utils import bound_reward
 
 
 class Scenario(BaseScenario):
@@ -30,7 +31,6 @@ class Scenario(BaseScenario):
             agent.accel = 3.0 if agent.adversary else 4.0
             #agent.accel = 20.0 if agent.adversary else 25.0
             agent.max_speed = 1.0 if agent.adversary else 1.3
-            self.change_entity_attribute(agent, **kwargs)
         
         # add landmarks
         world.landmarks = [Landmark() for _ in range(num_landmarks)]
@@ -38,9 +38,8 @@ class Scenario(BaseScenario):
             landmark.name = 'landmark %d' % i
             landmark.collide = True
             landmark.movable = False
-            landmark.size = 0.2
+            landmark.size = 0.075
             landmark.boundary = False
-            self.change_entity_attribute(landmark, **kwargs)
 
         # make initial conditions
         self.reset_world(world, **kwargs)
@@ -112,17 +111,7 @@ class Scenario(BaseScenario):
                     rew -= 10
 
         # agents are penalized for exiting the screen, so that they can be caught by the adversaries
-        def bound(x):
-            if x < 0.9:
-                return 0
-            if x < 1.0:
-                return (x - 0.9) * 10
-            return min(np.exp(2 * x - 2), 10)
-
-        for p in range(world.dim_p):
-            x = abs(agent.state.p_pos[p]) / world.size
-            rew -= bound(x)
-
+        rew += bound_reward(agent, world)
         return rew
 
     def adversary_reward(self, agent, world):

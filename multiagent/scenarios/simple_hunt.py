@@ -1,6 +1,7 @@
 import numpy as np
 from multiagent.core import World, entity2idx, SkilledAgent, Landmark, Mine
 from multiagent.scenario import BaseScenario
+from multiagent.utils import bound_reward
 
 
 class Scenario(BaseScenario):
@@ -119,16 +120,7 @@ class Scenario(BaseScenario):
                     rew -= 10
 
         # agents are penalized for exiting the screen, so that they can be caught by the adversaries
-        def bound(x):
-            if x < 0.9:
-                return 0
-            if x < 1.0:
-                return (x - 0.9) * 10
-            return min(np.exp(2 * x - 2), 10)
-        for p in range(world.dim_p):
-            x = abs(agent.state.p_pos[p])
-            rew -= bound(x)
-
+        rew += bound_reward(agent, world)
         return rew
 
     def adversary_reward(self, agent, world):
@@ -179,6 +171,3 @@ class Scenario(BaseScenario):
 
         return {"states": states, "masks": masks}
 
-
-
-# update this 
