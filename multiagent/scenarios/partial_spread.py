@@ -15,6 +15,7 @@ class Scenario(BaseScenario):
         # set any world properties first
         world.collaborative = True
         world.size = kwargs.get("world_size", 1)
+        world.use_mask = kwargs.get("use_mask", True)
         world.dim_c = kwargs.get("dim_c", 2)
         num_agents = kwargs.get("num_agents", 3)
         num_landmarks = kwargs.get("num_landmarks", 3)
@@ -126,8 +127,9 @@ class Scenario(BaseScenario):
             # relative position 
             e_pos = entity.state.p_pos - agent.state.p_pos
             # zero mask out entities not in agent signt 
-            # e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + entity.size else 0
-            e_mask = 1
+            e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + entity.size else 0
+            if not world.use_mask:
+                e_mask = 1
             entity_pos.append(e_pos * e_mask)
             # entity colors
             entity_color.append(entity.color * e_mask)
@@ -137,8 +139,9 @@ class Scenario(BaseScenario):
         for other in world.agents:
             if other is agent: continue
             e_pos = other.state.p_pos - agent.state.p_pos
-            # e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + other.size else 0
-            e_mask = 1
+            e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + other.size else 0
+            if not world.use_mask:
+                e_mask = 1
             comm.append(other.state.c)
             other_pos.append(e_pos * e_mask)
         # return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
