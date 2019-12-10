@@ -25,7 +25,7 @@ class Scenario(BaseScenario):
         for i, agent in enumerate(world.agents):
             agent.name = 'agent %d' % i
             agent.collide = True
-            agent.silent = True
+            agent.silent = kwargs.get("agent_silence", True)
             agent.size = 0.025
             # self.change_entity_attribute(agent, world, **kwargs)
         
