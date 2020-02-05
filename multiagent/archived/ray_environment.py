@@ -2,7 +2,7 @@ import gym
 from gym import spaces
 from gym.envs.registration import EnvSpec
 import numpy as np
-from multiagent.multi_discrete import MultiDiscrete
+from multiagent.multi_discrete import MultiDiscrete, MultiSpace 
 
 # environment for all agents in the multiagent world
 # currently code assumes that no agents will be created/destroyed at runtime!
@@ -47,14 +47,36 @@ class MultiAgentEnv(gym.Env):
         self.action_space = []
         self.observation_space = []
         for agent in self.agents:
-            # action space 
-            act_space = self.make_action_space(agent, self.world)
-            self.action_space.append(act_space)
+            total_action_space = []
+            # physical action space
+            if self.discrete_action_space:
+                u_action_space = spaces.Discrete(world.dim_p * 2 + 1)
+            else:
+                u_action_space = spaces.Box(low=-agent.u_range, high=+agent.u_range, shape=(world.dim_p,), dtype=np.float32)
+            if agent.movable:
+                total_action_space.append(u_action_space)
+            # communication action space
+            if self.discrete_action_space:
+                c_action_space = spaces.Discrete(world.dim_c)
+            else:
+                c_action_space = spaces.Box(low=0.0, high=1.0, shape=(world.dim_c,), dtype=np.float32)
+            if not agent.silent:
+                total_action_space.append(c_action_space)
+            # total action space
+            if len(total_action_space) > 1:
+                # all action spaces are discrete, so simplify to MultiDiscrete action space
+                if all([isinstance(act_space, spaces.Discrete) for act_space in total_action_space]):
+                    act_space = MultiDiscrete([[0, act_space.n - 1] for act_space in total_action_space])
+                else:
+                    act_space = MultiSpace(total_action_space)
+                self.action_space.append(act_space)
+            else:
+                self.action_space.append(total_action_space[0])
             # observation space
             obs_sample = observation_callback(agent, self.world)
             obs_space = self.make_observation_space(obs_sample) 
             self.observation_space.append(obs_space)
-            # misc
+
             agent.action.c = np.zeros(self.world.dim_c)
 
         # rendering
@@ -64,36 +86,6 @@ class MultiAgentEnv(gym.Env):
         else:
             self.viewers = [None] * self.n
         self._reset_render()
-
-    def make_action_space(self, agent, world):
-        """ make per agent action space
-        current actin space include: move, comm
-        """
-        total_action_space = []
-        # physical action space
-        if self.discrete_action_space:
-            u_action_space = spaces.Discrete(world.dim_p * 2 + 1)
-        else:
-            u_action_space = spaces.Box(low=-agent.u_range, high=+agent.u_range, shape=(world.dim_p,), dtype=np.float32)
-        if agent.movable:
-            total_action_space.append(u_action_space)
-        # communication action space
-        if self.discrete_action_space:
-            c_action_space = spaces.Discrete(world.dim_c)
-        else:
-            c_action_space = spaces.Box(low=0.0, high=1.0, shape=(world.dim_c,), dtype=np.float32)
-        if not agent.silent:
-            total_action_space.append(c_action_space)
-        # total action space
-        if len(total_action_space) > 1:
-            # NOTE: use Dict for flexibility 
-            act_space = spaces.Dict({
-                name: space for name, space in zip(
-                    ["move", "comm"], total_action_space)
-            })
-            return act_space 
-        else:
-            return total_action_space[0]
 
     def make_observation_space(self, obs_sample):
         """ make per agent observation space from a given sample 
@@ -113,7 +105,8 @@ class MultiAgentEnv(gym.Env):
                 elif k == "states":
                     assert len(v) > 0
                     n, state_dim = len(v), len(v[0])
-                    space = spaces.Tuple((
+                    # list of continuous agetn states (from perspective of current agent)
+                    space = MultiSpace((
                         spaces.Box(low=-np.inf, high=+np.inf, shape=(state_dim,), dtype=np.float32) 
                         for _ in range(n)
                     ))
@@ -194,59 +187,69 @@ class MultiAgentEnv(gym.Env):
         return self.reward_callback(agent, self.world)
 
     # set env action for a particular agent
-    def _set_action(self, action, agent, action_space, time=None):
-        """ action: action np array or dict of action (np array) 
-        """     
+    def _set_action(self, action, agent, action_space, time=None):        
         agent.action.u = np.zeros(self.world.dim_p)
         agent.action.c = np.zeros(self.world.dim_c)
         # process action
-        if agent.movable and not agent.silent:
-            move_act = action["move"]
-            comm_act = action["comm"]
-        elif agent.movable:
-            move_act = action 
-        elif not agent.silent:
-            comm_act = action 
+        if isinstance(action_space, MultiDiscrete):
+            act = []
+            size = action_space.high - action_space.low + 1
+            index = 0
+            for s in size:
+                act.append(action[index:(index+s)])
+                index += s
+            action = act
+        elif isinstance(action_space, MultiSpace):
+            # action is a concatenated array
+            index, act = 0, []
+            for space in action_space.spaces:
+                if isinstance(space, spaces.Discrete):
+                    s = 1 if self.discrete_action_input else space.n 
+                else:   # default to Box 
+                    s = space.shape[0]
+                act.append(action[index:index+s])
+                index += s
+            action = act
         else:
-            raise Exception("Agent set action failed...")
+            action = [action]
 
-        if agent.movable:   # physical action
-            if self.discrete_action_input:  # for hand control
+        if agent.movable:
+            # physical action
+            if self.discrete_action_input:
                 agent.action.u = np.zeros(self.world.dim_p)
-                # process discrete (non one-hot) action
-                if move_act == 1: agent.action.u[0] = -1.0
-                if move_act == 2: agent.action.u[0] = +1.0
-                if move_act == 3: agent.action.u[1] = -1.0
-                if move_act == 4: agent.action.u[1] = +1.0
+                # process discrete action
+                if action[0] == 1: agent.action.u[0] = -1.0
+                if action[0] == 2: agent.action.u[0] = +1.0
+                if action[0] == 3: agent.action.u[1] = -1.0
+                if action[0] == 4: agent.action.u[1] = +1.0
             else:
-                if self.force_discrete_action:  
-                    # for softened discrete action
-                    d = np.argmax(move_act)
-                    move_act[:] = 0.0
-                    move_act[d] = 1.0
+                if self.force_discrete_action:
+                    d = np.argmax(action[0])
+                    action[0][:] = 0.0
+                    action[0][d] = 1.0
                 if self.discrete_action_space:
-                    # move act is 5 dim if discrete
-                    agent.action.u[0] += move_act[1] - move_act[2]
-                    agent.action.u[1] += move_act[3] - move_act[4]
+                    agent.action.u[0] += action[0][1] - action[0][2]
+                    agent.action.u[1] += action[0][3] - action[0][4]
                 else:
-                    agent.action.u = move_act
+                    agent.action.u = action[0]
 
             sensitivity = 5.0
             if agent.accel is not None:
                 sensitivity = agent.accel
             agent.action.u *= sensitivity
+            action = action[1:]
 
-        if not agent.silent:    # communication action
-            if self.force_discrete_action:  
-                # for softened discrete action
-                d = np.argmax(comm_act)
-                comm_act[:] = 0.0
-                comm_act[d] = 1.0
+        if not agent.silent:
+            # communication action
             if self.discrete_action_input:
                 agent.action.c = np.zeros(self.world.dim_c)
-                agent.action.c[comm_act] = 1.0
+                agent.action.c[action[0]] = 1.0
             else:
-                agent.action.c = comm_act
+                agent.action.c = action[0]
+            action = action[1:]
+
+        # make sure we used all elements of action
+        assert len(action) == 0
 
     # reset rendering assets
     def _reset_render(self):

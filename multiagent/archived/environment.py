@@ -47,14 +47,16 @@ class MultiAgentEnv(gym.Env):
         self.action_space = []
         self.observation_space = []
         for agent in self.agents:
+
             # action space 
             act_space = self.make_action_space(agent, self.world)
             self.action_space.append(act_space)
+
             # observation space
             obs_sample = observation_callback(agent, self.world)
             obs_space = self.make_observation_space(obs_sample) 
             self.observation_space.append(obs_space)
-            # misc
+
             agent.action.c = np.zeros(self.world.dim_c)
 
         # rendering
@@ -89,7 +91,7 @@ class MultiAgentEnv(gym.Env):
             # NOTE: use Dict for flexibility 
             act_space = spaces.Dict({
                 name: space for name, space in zip(
-                    ["move", "comm"], total_action_space)
+                    total_action_space, ["move", "comm"])
             })
             return act_space 
         else:
@@ -197,56 +199,69 @@ class MultiAgentEnv(gym.Env):
     def _set_action(self, action, agent, action_space, time=None):
         """ action: action np array or dict of action (np array) 
         """     
+        # TODO: fix action spaces    
         agent.action.u = np.zeros(self.world.dim_p)
         agent.action.c = np.zeros(self.world.dim_c)
         # process action
-        if agent.movable and not agent.silent:
-            move_act = action["move"]
-            comm_act = action["comm"]
-        elif agent.movable:
-            move_act = action 
-        elif not agent.silent:
-            comm_act = action 
+        if isinstance(action_space, MultiDiscrete):
+            act = []
+            size = action_space.high - action_space.low + 1
+            index = 0
+            for s in size:
+                act.append(action[index:(index+s)])
+                index += s
+            action = act
+        elif isinstance(action_space, MultiSpace):
+            # action is a concatenated array
+            index, act = 0, []
+            for space in action_space.spaces:
+                if isinstance(space, spaces.Discrete):
+                    s = 1 if self.discrete_action_input else space.n 
+                else:   # default to Box 
+                    s = space.shape[0]
+                act.append(action[index:index+s])
+                index += s
+            action = act
         else:
-            raise Exception("Agent set action failed...")
+            action = [action]
 
-        if agent.movable:   # physical action
-            if self.discrete_action_input:  # for hand control
+        if agent.movable:
+            # physical action
+            if self.discrete_action_input:
                 agent.action.u = np.zeros(self.world.dim_p)
-                # process discrete (non one-hot) action
-                if move_act == 1: agent.action.u[0] = -1.0
-                if move_act == 2: agent.action.u[0] = +1.0
-                if move_act == 3: agent.action.u[1] = -1.0
-                if move_act == 4: agent.action.u[1] = +1.0
+                # process discrete action
+                if action[0] == 1: agent.action.u[0] = -1.0
+                if action[0] == 2: agent.action.u[0] = +1.0
+                if action[0] == 3: agent.action.u[1] = -1.0
+                if action[0] == 4: agent.action.u[1] = +1.0
             else:
-                if self.force_discrete_action:  
-                    # for softened discrete action
-                    d = np.argmax(move_act)
-                    move_act[:] = 0.0
-                    move_act[d] = 1.0
+                if self.force_discrete_action:
+                    d = np.argmax(action[0])
+                    action[0][:] = 0.0
+                    action[0][d] = 1.0
                 if self.discrete_action_space:
-                    # move act is 5 dim if discrete
-                    agent.action.u[0] += move_act[1] - move_act[2]
-                    agent.action.u[1] += move_act[3] - move_act[4]
+                    agent.action.u[0] += action[0][1] - action[0][2]
+                    agent.action.u[1] += action[0][3] - action[0][4]
                 else:
-                    agent.action.u = move_act
+                    agent.action.u = action[0]
 
             sensitivity = 5.0
             if agent.accel is not None:
                 sensitivity = agent.accel
             agent.action.u *= sensitivity
+            action = action[1:]
 
-        if not agent.silent:    # communication action
-            if self.force_discrete_action:  
-                # for softened discrete action
-                d = np.argmax(comm_act)
-                comm_act[:] = 0.0
-                comm_act[d] = 1.0
+        if not agent.silent:
+            # communication action
             if self.discrete_action_input:
                 agent.action.c = np.zeros(self.world.dim_c)
-                agent.action.c[comm_act] = 1.0
+                agent.action.c[action[0]] = 1.0
             else:
-                agent.action.c = comm_act
+                agent.action.c = action[0]
+            action = action[1:]
+
+        # make sure we used all elements of action
+        assert len(action) == 0
 
     # reset rendering assets
     def _reset_render(self):

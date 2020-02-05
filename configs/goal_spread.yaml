@@ -7,16 +7,9 @@ dim_p: 2
 dim_c: 2 
 num_agents: 3
 num_landmarks: 3
-use_mask: true
 # entity configs
 agent_pos_init: [uniform, -1, 1]
 landmark_pos_init: [uniform, -1, 1]
 agent_collide: true 
-agent_silence: false   
-# entity change fns 
-agent_config:
-  # change_fn: agent_set_skills_local
-  # change_fn: agent_set_skills_global
-  change_fn: agent_set_vision_global
-  vis_ratios: [0.5, 0.5, 1.5]
+agent_silence: true  
 
