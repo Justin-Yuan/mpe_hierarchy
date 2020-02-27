@@ -1,5 +1,5 @@
 import numpy as np
-from multiagent.core import World, Agent, Landmark
+from multiagent.core import World, SkilledAgent, Landmark
 from multiagent.scenario import BaseScenario
 from multiagent.utils import bound_reward
 
@@ -13,6 +13,8 @@ class Scenario(BaseScenario):
         # cache kwargs in case needed in Env wrapper 
         world.config = kwargs
         # set any world properties first
+        world.collaborative = False
+        # all entity positions are scaled/extended by size 
         world.size = kwargs.get("world_size", 1)
         world.dim_c = kwargs.get("dim_c", 2)
         num_good_agents = kwargs.get("num_good_agents", 1)
@@ -21,16 +23,18 @@ class Scenario(BaseScenario):
         num_landmarks = kwargs.get("num_landmarks", 2)
 
         # add agents
-        world.agents = [Agent() for _ in range(num_agents)]
+        world.agents = [SkilledAgent() for _ in range(num_agents)]
         for i, agent in enumerate(world.agents):
             agent.name = 'agent %d' % i
             agent.collide = True
-            agent.silent = True
+            agent.silent = kwargs.get("agent_silence", True)
             agent.adversary = True if i < num_adversaries else False
             agent.size = 0.075 if agent.adversary else 0.05
             agent.accel = 3.0 if agent.adversary else 4.0
             #agent.accel = 20.0 if agent.adversary else 25.0
             agent.max_speed = 1.0 if agent.adversary else 1.3
+
+            self.change_entity_attribute(agent, world, **kwargs)
         
         # add landmarks
         world.landmarks = [Landmark() for _ in range(num_landmarks)]
@@ -40,6 +44,7 @@ class Scenario(BaseScenario):
             landmark.movable = False
             landmark.size = 0.075
             landmark.boundary = False
+            self.change_entity_attribute(landmark, world, **kwargs)
 
         # make initial conditions
         self.reset_world(world, **kwargs)

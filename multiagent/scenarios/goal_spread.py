@@ -63,6 +63,12 @@ class Scenario(BaseScenario):
             landmark.state.p_pos = self.np_random.uniform(pos_min, pos_max, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
 
+        # assign goal (unique, distinctive) to agents
+        a2g = np.random.choice(len(world.landmarks), len(world.agents), replace=False)
+        for agent, g_idx in zip(world.agents, a2g):
+            agent.goal = world.landmarks[g_idx].state.p_pos
+
+
     def benchmark_data(self, agent, world):
         rew = 0
         collisions = 0
@@ -89,16 +95,17 @@ class Scenario(BaseScenario):
         return True if dist < dist_min else False
 
     def reward(self, agent, world):
-        # Agents are rewarded based on minimum agent distance to each landmark, penalized for collisions
+        # (discardeds) Agents are rewarded based on minimum agent distance to each landmark, penalized for collisions
+        # agents rewarded based on distance to goal landmark, penalized with collisions
         rew = 0
-        for l in world.landmarks:
-            dists = [np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos))) for a in world.agents]
-            rew -= min(dists)
+        # for l in world.landmarks:
+        #     dists = [np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos))) for a in world.agents]
+        #     rew -= min(dists)
+        rew -= np.sqrt(np.sum(np.square(agent.state.p_pos - agent.goal)))
         if agent.collide:
             for a in world.agents:
                 if self.is_collision(a, agent):
                     rew -= 1
-
         # # agents are penalized for exiting the screen, so that they can be caught by the adversaries
         # rew += bound_reward(agent, world)   # bound reward already negative
         return rew
@@ -108,7 +115,7 @@ class Scenario(BaseScenario):
         entity_pos = []
         for entity in world.landmarks:  # world.entities:
             entity_pos.append(entity.state.p_pos - agent.state.p_pos)
-        # entity colors
+        # entity colors (not added to obs)
         entity_color = []
         for entity in world.landmarks:  # world.entities:
             entity_color.append(entity.color)
@@ -119,6 +126,7 @@ class Scenario(BaseScenario):
             if other is agent: continue
             comm.append(other.state.c)
             other_pos.append(other.state.p_pos - agent.state.p_pos)
-        return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
+        # append goal (abs coords) to per agent obs
+        return np.concatenate([agent.goal] + [agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
 
     

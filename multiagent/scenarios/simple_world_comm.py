@@ -1,6 +1,7 @@
 import numpy as np
-from multiagent.core import World, Agent, Landmark
+from multiagent.core import World, SkilledAgent, Landmark
 from multiagent.scenario import BaseScenario
+from multiagent.utils import bound_reward
 
 
 class Scenario(BaseScenario):
@@ -9,51 +10,58 @@ class Scenario(BaseScenario):
 
         world = World()
         world.np_random = self.np_random
+        # cache kwargs in case needed in Env wrapper 
+        world.config = kwargs
         # set any world properties first
-        world.dim_c = 4
+        world.collaborative = False
+        # all entity positions are scaled/extended by size
+        world.size = kwargs.get("world_size", 1)
+        world.dim_c = kwargs.get("dim_c", 4)
         #world.damping = 1
-        num_good_agents = 2
-        num_adversaries = 4
+        num_good_agents = kwargs.get("num_good_agents", 2)
+        num_adversaries = kwargs.get("num_adversaries", 4)
         num_agents = num_adversaries + num_good_agents
-        num_landmarks = 1
-        num_food = 2
-        num_forests = 2
+        num_landmarks = kwargs.get("num_landmarks", 1)
+        num_food = kwargs.get("num_food", 2)
+        num_forests = kwargs.get("num_forests", 2)
 
         # add agents
-        world.agents = [Agent() for _ in range(num_agents)]
+        world.agents = [SkilledAgent() for i in range(num_agents)]
         for i, agent in enumerate(world.agents):
             agent.name = 'agent %d' % i
             agent.collide = True
             agent.leader = True if i == 0 else False
+            # only leader talks
             agent.silent = True if i > 0 else False
             agent.adversary = True if i < num_adversaries else False
-
             agent.size = 0.075 if agent.adversary else 0.045
             agent.accel = 3.0 if agent.adversary else 4.0
             #agent.accel = 20.0 if agent.adversary else 25.0
             agent.max_speed = 1.0 if agent.adversary else 1.3
-            self.change_entity_attribute(agent, **kwargs)
+
+            self.change_entity_attribute(agent, world, **kwargs)
 
         # add landmarks
-        world.landmarks = [Landmark() for _ in range(num_landmarks)]
+        world.landmarks = [Landmark() for i in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
             landmark.name = 'landmark %d' % i
             landmark.collide = True
             landmark.movable = False
             landmark.size = 0.2
             landmark.boundary = False
-            self.change_entity_attribute(landmark, **kwargs)
+            self.change_entity_attribute(landmark, world, **kwargs)
 
-
-        world.food = [Landmark() for _ in range(num_food)]
+        # add food
+        world.food = [Landmark() for i in range(num_food)]
         for i, landmark in enumerate(world.food):
             landmark.name = 'food %d' % i
             landmark.collide = False
             landmark.movable = False
             landmark.size = 0.03
             landmark.boundary = False
-            self.change_entity_attribute(landmark, **kwargs)
+            self.change_entity_attribute(landmark, world, **kwargs)
 
+        # add forests
         world.forests = [Landmark() for i in range(num_forests)]
         for i, landmark in enumerate(world.forests):
             landmark.name = 'forest %d' % i
@@ -61,13 +69,14 @@ class Scenario(BaseScenario):
             landmark.movable = False
             landmark.size = 0.3
             landmark.boundary = False
-            self.change_entity_attribute(landmark, **kwargs)
+            self.change_entity_attribute(landmark, world, **kwargs)
 
         world.landmarks += world.food
         world.landmarks += world.forests
         #world.landmarks += self.set_boundaries(world)  # world boundaries now penalized with negative reward
+
         # make initial conditions
-        self.reset_world(world)
+        self.reset_world(world, **kwargs)
         return world
 
     def set_boundaries(self, world):
@@ -98,31 +107,41 @@ class Scenario(BaseScenario):
 
         return boundary_list
 
-    def reset_world(self, world):
+
+    def reset_world(self, world, **kwargs):
         # random properties for agents
         for i, agent in enumerate(world.agents):
             agent.color = np.array([0.45, 0.95, 0.45]) if not agent.adversary else np.array([0.95, 0.45, 0.45])
             agent.color -= np.array([0.3, 0.3, 0.3]) if agent.leader else np.array([0, 0, 0])
-            # random properties for landmarks
+            
+        # random properties for landmarks
         for i, landmark in enumerate(world.landmarks):
             landmark.color = np.array([0.25, 0.25, 0.25])
         for i, landmark in enumerate(world.food):
             landmark.color = np.array([0.15, 0.15, 0.65])
         for i, landmark in enumerate(world.forests):
             landmark.color = np.array([0.6, 0.9, 0.6])
+
         # set random initial states
         for agent in world.agents:
-            agent.state.p_pos = self.np_random.uniform(-1, +1, world.dim_p)
+            pos_min, pos_max = kwargs.get("agent_pos_init", [0,-1,1])[1:]
+            agent.state.p_pos = self.np_random.uniform(pos_min, pos_max, world.dim_p)
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
+
         for i, landmark in enumerate(world.landmarks):
-            landmark.state.p_pos = self.np_random.uniform(-0.9, +0.9, world.dim_p)
+            pos_min, pos_max = kwargs.get("landmark_pos_init", [0,-1,1])[1:]
+            landmark.state.p_pos = self.np_random.uniform(0.9*pos_min, 0.9*pos_max, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
+
         for i, landmark in enumerate(world.food):
-            landmark.state.p_pos = self.np_random.uniform(-0.9, +0.9, world.dim_p)
+            pos_min, pos_max = kwargs.get("landmark_pos_init", [0,-1,1])[1:]
+            landmark.state.p_pos = self.np_random.uniform(0.9*pos_min, 0.9*pos_max, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
+
         for i, landmark in enumerate(world.forests):
-            landmark.state.p_pos = self.np_random.uniform(-0.9, +0.9, world.dim_p)
+            pos_min, pos_max = kwargs.get("landmark_pos_init", [0,-1,1])[1:]
+            landmark.state.p_pos = self.np_random.uniform(0.9*pos_min, 0.9*pos_max, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
 
     def benchmark_data(self, agent, world):
@@ -177,6 +196,7 @@ class Scenario(BaseScenario):
             for a in adversaries:
                 if self.is_collision(a, agent):
                     rew -= 5
+
         def bound(x):
             if x < 0.9:
                 return 0
@@ -187,6 +207,8 @@ class Scenario(BaseScenario):
         for p in range(world.dim_p):
             x = abs(agent.state.p_pos[p])
             rew -= 2 * bound(x)
+        # # agents are penalized for exiting the screen, so that they can be caught by the adversaries
+        # rew += bound_reward(agent, world)   # bound reward already negative
 
         for food in world.food:
             if self.is_collision(agent, food):
@@ -203,6 +225,7 @@ class Scenario(BaseScenario):
         adversaries = self.adversaries(world)
         if shape:
             rew -= 0.1 * min([np.sqrt(np.sum(np.square(a.state.p_pos - agent.state.p_pos))) for a in agents])
+        # adversary reward shared within all adversaries !!
         if agent.collide:
             for ag in agents:
                 for adv in adversaries:
