@@ -17,7 +17,7 @@ class Scenario(BaseScenario):
         # all entity positions are scaled/extended by size 
         world.size = kwargs.get("world_size", 1)
         world.dim_c = kwargs.get("dim_c", 10)
-        num_agents = kwargs.get("num_agents", 3)
+        num_agents = kwargs.get("num_agents", 2)
         num_landmarks = kwargs.get("num_landmarks", 3)
 
         # add agents

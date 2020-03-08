@@ -2,11 +2,11 @@
 discrete_action_space: false 
 discrete_action_input: false 
 discrete_action: false 
-world_size: 2
+world_size: 1
 dim_p: 2
 dim_c: 2 
-num_good_agents: 2
-num_adversaries: 4
+num_good_agents: 1
+num_adversaries: 3
 num_landmarks: 2
 # entity configs
 agent_pos_init: [uniform, -1, 1]

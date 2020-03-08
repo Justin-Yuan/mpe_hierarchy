@@ -93,6 +93,12 @@ class Viewer(object):
             geom.render()
         for geom in self.onetime_geoms:
             geom.render()
+        label = pyglet.text.Label('Hello, world',
+                          font_name='Times New Roman',
+                          font_size=36,
+                          x=self.width//2, y=self.height//2,
+                          anchor_x='center', anchor_y='center')
+        label.draw()
         self.transform.disable()
         arr = None
         if return_rgb_array:
@@ -136,6 +142,12 @@ class Viewer(object):
         self.add_onetime(geom)
         return geom
 
+    def draw_text(self, text, position=(0, 0), **attrs):
+        geom = Text(text, position)
+        _add_attrs(geom, attrs)
+        self.add_onetime(geom)
+        return geom
+
     def get_array(self):
         self.window.flip()
         image_data = pyglet.image.get_buffer_manager().get_color_buffer().get_image_data()
@@ -149,6 +161,12 @@ def _add_attrs(geom, attrs):
         geom.set_color(*attrs["color"])
     if "linewidth" in attrs:
         geom.set_linewidth(attrs["linewidth"])
+    if "font_size" in attrs:
+        geom.set_font_size(attrs["font_size"])
+    if "anchor_x" in attrs:
+        geom.set_anchor_x(attrs["anchor_x"])
+    if "anchor_y" in attrs:
+        geom.set_anchor_y(attrs["anchor_y"])
 
 class Geom(object):
     def __init__(self):
@@ -311,10 +329,60 @@ class Image(Geom):
         self.width = width
         self.height = height
         img = pyglet.image.load(fname)
+        # img = pyglet.image.load("k.jpg")
         self.img = img
+        # self.label = pyglet.text.Label(
+        #     "aa", font_size=0.5, x=0, y=0, 
+        #     anchor_x='center', anchor_y='center', 
+        #     color=(255, 123, 255, 255)
+        # )
+        # self.label.draw()
         self.flip = False
     def render1(self):
         self.img.blit(-self.width/2, -self.height/2, width=self.width, height=self.height)
+
+
+class Text(Geom):
+    """ add a text label to scene 
+        reference: https://github.com/openai/gym/pull/1668
+    """
+    def __init__(self, text, position=(0, 0), font_size=36, anchor_x="center", anchor_y="center", color=(0, 0, 0, 255)):
+        Geom.__init__(self)
+        self.text = text
+        self.position = position
+        self.font_size = font_size
+        self.anchor_x = anchor_x
+        self.anchor_y = anchor_y
+        self.color = color
+        self.label = pyglet.text.Label(
+            self.text, font_size=self.font_size, x=self.position[0], y=self.position[-1], 
+            anchor_x=self.anchor_x, anchor_y=self.anchor_y, color=self.color, bold=False
+        )
+        
+    def render1(self):
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        # glScalef(0.03, 0.03, 1)
+        glScalef(0.001, 0.001, 1)
+        self.label.draw()
+        glPopMatrix()
+
+    def set_text(self, text):
+        self.text = text 
+        self.label.text = text 
+
+    def set_font_size(self, fs):
+        self.font_size = fs
+        self.label.font_size = fs
+        
+    def set_anchor_x(self, ax):
+        self.anchor_x = ax
+        self.label.anchor_x = ax
+
+    def set_anchor_y(self, ay):
+        self.anchor_y = ay
+        self.label.anchor_y = ay
+
 
 # ================================================================
 
