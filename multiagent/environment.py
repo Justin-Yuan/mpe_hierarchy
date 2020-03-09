@@ -3,7 +3,6 @@ from gym import spaces
 from gym.envs.registration import EnvSpec
 import numpy as np
 from multiagent.multi_discrete import MultiDiscrete
-from multiagent import rendering
 
 # environment for all agents in the multiagent world
 # currently code assumes that no agents will be created/destroyed at runtime!
@@ -279,6 +278,8 @@ class MultiAgentEnv(gym.Env):
 
     # create geoms and transforms for basic agents and landmarks
     def setup_geometry(self):
+        # lazy import 
+        from multiagent import rendering
         if self.render_dict is not None:
             return 
         self.render_dict = {}

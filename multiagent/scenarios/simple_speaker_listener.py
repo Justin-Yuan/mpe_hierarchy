@@ -5,7 +5,6 @@ from pyglet import gl
 from multiagent.core import World, SkilledAgent, Landmark
 from multiagent.scenario import BaseScenario
 from multiagent.utils import bound_reward
-from multiagent import rendering
 
 
 class Scenario(BaseScenario):
@@ -168,6 +167,9 @@ class Scenario(BaseScenario):
     def setup_geometry(self, env):
         """ create geoms and transforms for basic agents and landmarks
         """ 
+        # lazy import 
+        from multiagent import rendering
+
         if getattr(env, "render_dict", None) is not None:
             return 
         env.render_dict = {}

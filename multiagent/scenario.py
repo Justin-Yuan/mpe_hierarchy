@@ -3,7 +3,6 @@ from gym.utils import seeding
 import ipdb
 
 from multiagent.utils import CHANGE_FN_REGISTRY as fn_registry
-from multiagent import rendering
 
 
 # defines scenario upon which the world is built
@@ -64,6 +63,8 @@ class BaseScenario(object):
     def setup_geometry(self, env):
         """ create geoms and transforms for basic agents and landmarks
         """ 
+        # lazy import, in case remote has no screen
+        from multiagent import rendering
         if getattr(env, "render_dict", None) is not None:
             return 
         env.render_dict = {}
