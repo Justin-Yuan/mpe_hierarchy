@@ -5,8 +5,8 @@ discrete_action: false
 world_size: 1
 dim_p: 2
 dim_c: 2 
-num_agents: 3
-num_landmarks: 3
+num_agents: 2
+num_landmarks: 1
 # entity configs
 agent_pos_init: [uniform, -1, 1]
 landmark_pos_init: [uniform, -1, 1]

@@ -1,7 +1,9 @@
 import numpy as np
+from itertools import combinations 
+
 from multiagent.core import World, SkilledAgent, Landmark
 from multiagent.scenario import BaseScenario
-from multiagent.utils import bound_reward
+from multiagent.utils import bound_reward, ObsDecorator
 
 
 class Scenario(BaseScenario):
@@ -20,11 +22,20 @@ class Scenario(BaseScenario):
         num_agents = kwargs.get("num_agents", 3)
         num_landmarks = kwargs.get("num_landmarks", 3)
 
+
+        # NOTE: for debug, use stacked  agent observations 
+        use_stacked_obs = kwargs.get("use_stacked_obs", False)
+        stacked_obs_num = kwargs.get("stacked_obs_num", 1)
+        if use_stacked_obs:
+            obs_decorator = ObsDecorator(stacked_obs_num=stacked_obs_num)
+            self.observation = obs_decorator.obs_stacker(self.observation)
+
+
         # add agents
         world.agents = [SkilledAgent() for _ in range(num_agents)]
         for i, agent in enumerate(world.agents):
             agent.name = 'agent %d' % i
-            agent.collide = True
+            agent.collide = False
             agent.silent = kwargs.get("agent_silence", True)
             agent.size = 0.025
             # self.change_entity_attribute(agent, world, **kwargs)
@@ -62,9 +73,9 @@ class Scenario(BaseScenario):
             pos_min, pos_max = kwargs.get("landmark_pos_init", [0,-1,1])[1:]
             landmark.state.p_pos = self.np_random.uniform(pos_min, pos_max, world.dim_p)
             landmark.state.p_vel = np.zeros(world.dim_p)
-
-        # assign goal (unique, distinctive) to agents
-        a2g = np.random.choice(len(world.landmarks), len(world.agents), replace=False)
+        
+        # assign goal (non-unique) to agents
+        a2g = np.random.choice(len(world.landmarks), len(world.agents), replace=True)
         for agent, g_idx in zip(world.agents, a2g):
             agent.goal = world.landmarks[g_idx]
 
@@ -95,17 +106,24 @@ class Scenario(BaseScenario):
         return True if dist < dist_min else False
 
     def reward(self, agent, world):
-        # (discardeds) Agents are rewarded based on minimum agent distance to each landmark, penalized for collisions
-        # agents rewarded based on distance to goal landmark, penalized with collisions
+        # Agents are rewarded based on minimum agent distance to each landmark, penalized for collisions
         rew = 0
-        # for l in world.landmarks:
-        #     dists = [np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos))) for a in world.agents]
-        #     rew -= min(dists)
-        rew -= np.sqrt(np.sum(np.square(agent.state.p_pos - agent.goal.state.p_pos)))
+        a2g_dists = []
+        # agent to goal distances 
+        for a in world.agents:
+            dist = np.sqrt(np.sum(np.square(a.state.p_pos - a.goal.state.p_pos)))
+            a2g_dists.append(dist)
+            rew -= dist
+        # agent synchronization distances 
+        pairs = list(combinations(a2g_dists, 2)) 
+        for p in pairs:
+            rew -= np.abs(p[0] - p[1])
+        # collision penalty
         if agent.collide:
             for a in world.agents:
                 if self.is_collision(a, agent):
                     rew -= 1
+
         # # agents are penalized for exiting the screen, so that they can be caught by the adversaries
         # rew += bound_reward(agent, world)   # bound reward already negative
         return rew
@@ -115,7 +133,7 @@ class Scenario(BaseScenario):
         entity_pos = []
         for entity in world.landmarks:  # world.entities:
             entity_pos.append(entity.state.p_pos - agent.state.p_pos)
-        # entity colors (not added to obs)
+        # entity colors
         entity_color = []
         for entity in world.landmarks:  # world.entities:
             entity_color.append(entity.color)
@@ -126,7 +144,10 @@ class Scenario(BaseScenario):
             if other is agent: continue
             comm.append(other.state.c)
             other_pos.append(other.state.p_pos - agent.state.p_pos)
-        # append goal (abs coords) to per agent obs
-        return np.concatenate([agent.goal.state.p_pos] + [agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
+        # return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
+        return np.concatenate([agent.goal.state.p_pos] + [agent.state.p_vel] + [agent.state.p_pos] + comm)
+
+    
+
 
     

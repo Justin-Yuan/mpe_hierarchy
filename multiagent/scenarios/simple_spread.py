@@ -1,7 +1,7 @@
 import numpy as np
 from multiagent.core import World, SkilledAgent, Landmark
 from multiagent.scenario import BaseScenario
-from multiagent.utils import bound_reward
+from multiagent.utils import bound_reward, ObsDecorator
 
 
 class Scenario(BaseScenario):
@@ -19,6 +19,15 @@ class Scenario(BaseScenario):
         world.dim_c = kwargs.get("dim_c", 2)
         num_agents = kwargs.get("num_agents", 3)
         num_landmarks = kwargs.get("num_landmarks", 3)
+
+
+        # NOTE: for debug, use stacked  agent observations 
+        use_stacked_obs = kwargs.get("use_stacked_obs", False)
+        stacked_obs_num = kwargs.get("stacked_obs_num", 1)
+        if use_stacked_obs:
+            obs_decorator = ObsDecorator(stacked_obs_num=stacked_obs_num)
+            self.observation = obs_decorator.obs_stacker(self.observation)
+
 
         # add agents
         world.agents = [SkilledAgent() for _ in range(num_agents)]

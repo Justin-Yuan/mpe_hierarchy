@@ -108,3 +108,32 @@ def hierarchy_reward(agent, world):
     rew = 0 
     return rew
     
+
+##########################################################################################
+####################################     observation change fn   ##################################
+##########################################################################################
+
+class ObsDecorator(object):
+    """ contain different wrapper on normal obs_fn 
+        (that returns current time step obs)
+    """
+    def __init__(self, stacked_obs_num=1, **kwargs):
+        self.stacked_obs_num = stacked_obs_num
+
+    def obs_stacker(self, obs_fn):
+        """ stack obs from multiple time steps 
+        """
+        def wrapped_f(*args):
+            obs = obs_fn(*args) # obs at current time step, (O,)
+            agent = args[1]
+            # only done initially 
+            if not hasattr(agent, "obs_list"):
+                agent.obs_list = [obs] * self.self.stacked_obs_num
+            # push current obserevation in 
+            agent.obs_list.pop(0)
+            agent.obs_list.append(obs)  # [(O,)]*k
+            # return stacked obs (concatenated)
+            return np.concatenate(agent.obs_list, -1)   # (O*k,)
+        return wrapped_f
+
+        
