@@ -17,6 +17,8 @@ class Scenario(BaseScenario):
         # all entity positions are scaled/extended by size 
         world.size = kwargs.get("world_size", 1)
         world.dim_c = kwargs.get("dim_c", 2)
+        world.shape_rewards = kwargs.get("shape_rewards", False)
+
         num_good_agents = kwargs.get("num_good_agents", 1)
         num_adversaries = kwargs.get("num_adversaries", 3)
         num_agents = num_adversaries + num_good_agents
@@ -29,6 +31,7 @@ class Scenario(BaseScenario):
             agent.collide = True
             agent.silent = kwargs.get("agent_silence", True)
             agent.adversary = True if i < num_adversaries else False
+            # agent.size = 0.075 if agent.adversary else 0.05
             agent.size = 0.075 if agent.adversary else 0.05
             agent.accel = 3.0 if agent.adversary else 4.0
             #agent.accel = 20.0 if agent.adversary else 25.0
@@ -105,27 +108,30 @@ class Scenario(BaseScenario):
     def agent_reward(self, agent, world):
         # Agents are negatively rewarded if caught by adversaries
         rew = 0
-        shape = False
+        # shape = False
         adversaries = self.adversaries(world)
-        if shape:  # reward can optionally be shaped (increased reward for increased distance from adversary)
+        # if shape:  # reward can optionally be shaped (increased reward for increased distance from adversary)
+        if world.shape_rewards:
             for adv in adversaries:
                 rew += 0.1 * np.sqrt(np.sum(np.square(agent.state.p_pos - adv.state.p_pos)))
         if agent.collide:
             for a in adversaries:
                 if self.is_collision(a, agent):
                     rew -= 10
+                    # rew -= 1
 
         # # agents are penalized for exiting the screen, so that they can be caught by the adversaries
-        # rew += bound_reward(agent, world)
+        rew += bound_reward(agent, world)
         return rew
 
     def adversary_reward(self, agent, world):
         # Adversaries are rewarded for collisions with agents
         rew = 0
-        shape = False
+        # shape = False
         agents = self.good_agents(world)
         adversaries = self.adversaries(world)
-        if shape:  # reward can optionally be shaped (decreased reward for increased distance from agents)
+        # if shape:  # reward can optionally be shaped (decreased reward for increased distance from agents)
+        if world.shape_rewards:
             for adv in adversaries:
                 rew -= 0.1 * min([np.sqrt(np.sum(np.square(a.state.p_pos - adv.state.p_pos))) for a in agents])
         if agent.collide:
@@ -133,6 +139,7 @@ class Scenario(BaseScenario):
                 for adv in adversaries:
                     if self.is_collision(ag, adv):
                         rew += 10
+                        # rew += 1
         return rew
 
     def observation(self, agent, world):
