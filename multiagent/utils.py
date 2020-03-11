@@ -1,5 +1,5 @@
 import numpy as np 
-
+from copy import deepcopy
 
 ##########################################################################################
 ####################################     Entity change fn   ##################################
@@ -107,6 +107,23 @@ def hierarchy_reward(agent, world):
     """
     rew = 0 
     return rew
+
+
+##########################################################################################
+####################################     Environemtn Utils   ##################################
+##########################################################################################
+
+
+def mask_agent_obs(vecs, agent, entity, world):
+    """ filter agent observation (list of vecs) by distance metric 
+    """
+    if not world.use_mask:
+        return vecs 
+    new_vecs = deepcopy(vecs)
+    dist = np.linalg.norm(entity.state.p_pos - agent.state.p_pos)
+    if dist <= agent.vision_range + entity.size:
+        new_vecs = [np.ones_like(v) * world.mask_value for v in new_vecs]
+    return new_vecs
     
 
 ##########################################################################################

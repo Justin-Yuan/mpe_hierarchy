@@ -17,7 +17,9 @@ class Scenario(BaseScenario):
         # all entity positions are scaled/extended by size 
         world.size = kwargs.get("world_size", 1)
         world.dim_c = kwargs.get("dim_c", 2)
+        # other configs 
         world.shape_rewards = kwargs.get("shape_rewards", False)
+        world.per_adv_rewards = kwargs.get("per_adv_rewards", False)
 
         num_good_agents = kwargs.get("num_good_agents", 1)
         num_adversaries = kwargs.get("num_adversaries", 3)
@@ -131,16 +133,25 @@ class Scenario(BaseScenario):
         agents = self.good_agents(world)
         adversaries = self.adversaries(world)
         # if shape:  # reward can optionally be shaped (decreased reward for increased distance from agents)
-        if world.shape_rewards:
-            for adv in adversaries:
-                rew -= 0.1 * min([np.sqrt(np.sum(np.square(a.state.p_pos - adv.state.p_pos))) for a in agents])
-        if agent.collide:
-            for ag in agents:
+        if not world.per_adv_rewards:
+            if world.shape_rewards:
                 for adv in adversaries:
-                    if self.is_collision(ag, adv):
+                    rew -= 0.1 * min([np.sqrt(np.sum(np.square(a.state.p_pos - adv.state.p_pos))) for a in agents])
+            if agent.collide:
+                for ag in agents:
+                    for adv in adversaries:
+                        if self.is_collision(ag, adv):
+                            rew += 10
+                            # rew += 1
+        else:
+            if world.shape_rewards:
+                rew -= 0.1 * min([np.sqrt(np.sum(np.square(a.state.p_pos - agent.state.p_pos))) for a in agents])
+            if agent.collide:
+                for ag in agents:
+                    if self.is_collision(ag, agent):
                         rew += 10
-                        # rew += 1
         return rew
+
 
     def observation(self, agent, world):
         # get positions of all entities in this agent's reference frame
@@ -159,3 +170,66 @@ class Scenario(BaseScenario):
             if not other.adversary:
                 other_vel.append(other.state.p_vel)
         return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + other_vel)
+
+
+    def setup_geometry(self, env):
+        """ create geoms and transforms for basic agents and landmarks
+        """ 
+        # lazy import 
+        from multiagent import rendering
+
+        if getattr(env, "render_dict", None) is not None:
+            return 
+        env.render_dict = {}
+
+        # make geometries and transforms
+        for entity in env.world.entities:
+            name = entity.name
+            geom = rendering.make_circle(entity.size)
+            xform = rendering.Transform()
+
+            # agent on top, other entity to background 
+            alpha = 0.6 if "agent" in name else 0.5
+            geom.set_color(*entity.color, alpha=alpha)   
+
+            geom.add_attr(xform)
+            env.render_dict[name] = {
+                "geom": geom, 
+                "xform": xform, 
+                "attach_ent": entity
+            }
+
+            # VIS: show visual range/receptor field
+            if 'agent' in entity.name and env.show_visual_range:
+                vis_geom = rendering.make_circle(entity.vision_range)
+                vis_geom.set_color(*entity.color, alpha=0.2)
+                vis_xform = rendering.Transform()
+                vis_geom.add_attr(vis_xform)
+                env.render_dict[name+"_vis"] = {
+                    "geom": vis_geom, 
+                    "xform": vis_xform, 
+                    "attach_ent": entity
+                }
+
+            # LABEL: display type & numbering 
+            prefix = "A" if "agent" in entity.name else "L"
+            idx = int(name.split(" ")[-1])
+            x = entity.state.p_pos[0] 
+            y = entity.state.p_pos[1] 
+            label_geom = rendering.Text("{}{}".format(prefix,idx), position=(x,y), font_size=30)
+            label_xform = rendering.Transform()
+            label_geom.add_attr(label_xform)
+            env.render_dict[name+"_label"] = {
+                "geom": label_geom, 
+                "xform": label_xform, 
+                "attach_ent": entity
+            }
+                    
+        
+        # add geoms to viewer
+        for viewer in env.viewers:
+            viewer.geoms = []
+            for k, d in env.render_dict.items():
+                viewer.add_geom(d["geom"])
+
+

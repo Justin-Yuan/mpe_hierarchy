@@ -300,6 +300,20 @@ class MultiAgentEnv(gym.Env):
                 "xform": xform, 
                 "attach_ent": entity
             }
+
+            # LABEL: display type & numbering 
+            prefix = "A" if "agent" in entity.name else "L"
+            idx = int(name.split(" ")[-1])
+            x = entity.state.p_pos[0] 
+            y = entity.state.p_pos[1] 
+            label_geom = rendering.Text("{}{}".format(prefix,idx), position=(x,y), font_size=30)
+            label_xform = rendering.Transform()
+            label_geom.add_attr(label_xform)
+            self.render_dict[name+"_label"] = {
+                "geom": label_geom, 
+                "xform": label_xform, 
+                "attach_ent": entity
+            }
         
         # add geoms to viewer
         for viewer in self.viewers:

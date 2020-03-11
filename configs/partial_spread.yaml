@@ -18,5 +18,7 @@ agent_config:
   # change_fn: agent_set_skills_local
   # change_fn: agent_set_skills_global
   change_fn: agent_set_vision_global
-  vis_ratios: [0.5, 0.5, 1.5]
-
+  vis_ratios: [0.75, 0.75, 0.75]
+# if to use stacked obs 
+use_stacked_obs: False 
+stacked_obs_num: 1 

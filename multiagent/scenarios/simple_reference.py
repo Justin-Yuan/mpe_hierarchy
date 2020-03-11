@@ -104,3 +104,110 @@ class Scenario(BaseScenario):
             comm.append(other.state.c)
         return np.concatenate([agent.state.p_vel] + entity_pos + [goal_color[1]] + comm)
             
+    
+    def setup_geometry(self, env):
+        """ create geoms and transforms for basic agents and landmarks
+        """ 
+        # lazy import 
+        from multiagent import rendering
+
+        if getattr(env, "render_dict", None) is not None:
+            return 
+        env.render_dict = {}
+
+        # make geometries and transforms
+        for entity in env.world.entities:
+            name = entity.name
+            geom = rendering.make_circle(entity.size)
+            xform = rendering.Transform()
+
+            # agent on top, other entity to background 
+            alpha = 0.6 if "agent" in name else 0.5
+            geom.set_color(*entity.color, alpha=alpha)   
+
+            geom.add_attr(xform)
+            env.render_dict[name] = {
+                "geom": geom, 
+                "xform": xform, 
+                "attach_ent": entity
+            }
+
+            # VIS: show visual range/receptor field
+            if 'agent' in entity.name and env.show_visual_range:
+                vis_geom = rendering.make_circle(entity.vision_range)
+                vis_geom.set_color(*entity.color, alpha=0.2)
+                vis_xform = rendering.Transform()
+                vis_geom.add_attr(vis_xform)
+                env.render_dict[name+"_vis"] = {
+                    "geom": vis_geom, 
+                    "xform": vis_xform, 
+                    "attach_ent": entity
+                }
+
+            # GOAL: highlight goal entities
+            if "agent" in entity.name and entity.goal_b is not None:
+                for goal in [entity.goal_a, entity.goal_b]:
+                    goal_geom = rendering.make_circle(goal.size*1.5)
+                    goal_geom.set_color(*goal.color, alpha=0.2)
+                    goal_xform = rendering.Transform()
+                    goal_geom.add_attr(goal_xform)
+                    env.render_dict[goal.name+"_highlight"] = {
+                        "geom": goal_geom, 
+                        "xform": goal_xform, 
+                        "attach_ent": goal
+                    }
+
+            # LABEL: display comm message
+            if "agent" in entity.name and entity.goal_b is not None:
+            # if "agent" in entity.name and entity.goal_b is None:
+                x = entity.state.p_pos[0] + 50
+                y = entity.state.p_pos[1] + 50
+                comm_geom = rendering.Text("_", position=(x,y), font_size=36)
+                comm_xform = rendering.Transform()
+                comm_geom.add_attr(comm_xform)
+                env.render_dict[name+"_comm"] = {
+                    "geom": comm_geom, 
+                    "xform": comm_xform, 
+                    "attach_ent": entity
+                }
+                    
+        
+        # add geoms to viewer
+        for viewer in env.viewers:
+            viewer.geoms = []
+            for k, d in env.render_dict.items():
+                viewer.add_geom(d["geom"])
+
+            
+    def exec_rendering(self, env, mode="human"):
+        """ lay out objects in the scene 
+        """
+        results = []
+        for i in range(len(env.viewers)):
+            # update bounds to center around agent
+            cam_range = env.cam_range   # 1
+            if env.shared_viewer:
+                pos = np.zeros(env.world.dim_p)
+            else:
+                pos = env.agents[i].state.p_pos
+            
+            # set view centered arond agent
+            # self.viewers[i].set_bounds(pos[0]-cam_range,pos[0]+cam_range,pos[1]-cam_range,pos[1]+cam_range)
+            env.viewers[i].set_bounds(-cam_range, cam_range, -cam_range, cam_range)
+            
+            # update geometry positions
+            for k, v in env.render_dict.items():    
+                # update comm message
+                if "comm" in k:
+                    ent = v["attach_ent"]
+                    comm_msg = str(ent.state.c)
+                    v["geom"].set_text(comm_msg)
+                   
+                xform_pos = v["attach_ent"].state.p_pos
+                v["xform"].set_translation(*xform_pos)
+               
+            # render to display or array
+            results.append(
+                env.viewers[i].render(return_rgb_array = mode=='rgb_array')
+            )
+        return results

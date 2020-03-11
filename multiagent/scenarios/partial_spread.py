@@ -1,7 +1,7 @@
 import numpy as np
 from multiagent.core import World, SkilledAgent, Landmark
 from multiagent.scenario import BaseScenario
-from multiagent.utils import bound_reward
+from multiagent.utils import bound_reward, mask_agent_obs
 
 
 class Scenario(BaseScenario):
@@ -15,10 +15,19 @@ class Scenario(BaseScenario):
         # set any world properties first
         world.collaborative = True
         world.size = kwargs.get("world_size", 1)
-        world.use_mask = kwargs.get("use_mask", True)
         world.dim_c = kwargs.get("dim_c", 2)
         num_agents = kwargs.get("num_agents", 3)
         num_landmarks = kwargs.get("num_landmarks", 3)
+        world.use_mask = kwargs.get("use_mask", True)
+        world.mask_value = world.size * 10 
+
+        # NOTE: for debug, use stacked  agent observations 
+        use_stacked_obs = kwargs.get("use_stacked_obs", False)
+        stacked_obs_num = kwargs.get("stacked_obs_num", 1)
+        if use_stacked_obs:
+            obs_decorator = ObsDecorator(stacked_obs_num=stacked_obs_num)
+            self.observation = obs_decorator.obs_stacker(self.observation)
+
 
         # add agents
         world.agents = [SkilledAgent() for _ in range(num_agents)]
@@ -118,6 +127,7 @@ class Scenario(BaseScenario):
         # rew += bound_reward(agent, world)
         return rew
 
+
     def observation(self, agent, world):
         """ agent obs with partial observation 
         """
@@ -126,24 +136,23 @@ class Scenario(BaseScenario):
         for entity in world.landmarks:  # world.entities:
             # relative position 
             e_pos = entity.state.p_pos - agent.state.p_pos
-            # zero mask out entities not in agent signt 
-            e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + entity.size else 0
-            if not world.use_mask:
-                e_mask = 1
-            entity_pos.append(e_pos * e_mask)
-            # entity colors
-            entity_color.append(entity.color * e_mask)
+            color = entity.color
+            # mask out entities not in agent signt 
+            e_pos, color = mask_agent_obs(
+                [e_pos, color], agent, entity, world)
+            entity_pos.append(e_pos)
+            entity_color.append(color)
         # communication of all other agents
         comm = []
         other_pos = []
         for other in world.agents:
             if other is agent: continue
             e_pos = other.state.p_pos - agent.state.p_pos
-            e_mask = 1 if np.sqrt(np.sum(np.square(e_pos))) <= agent.vision_range + other.size else 0
-            if not world.use_mask:
-                e_mask = 1
+            # mask out entities not in agent signt 
+            e_pos = mask_agent_obs(
+                [e_pos], agent, other, world)[0]
+            other_pos.append(e_pos)
             comm.append(other.state.c)
-            other_pos.append(e_pos * e_mask)
         # return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
 
         # plus agent's own attributs 
@@ -154,6 +163,9 @@ class Scenario(BaseScenario):
         self_attr = np.array(self_attr)
 
         return np.concatenate([self_attr] + [agent.state.p_vel] + [agent.state.p_pos] + entity_pos + other_pos + comm)
+
+
+
 
 
 
