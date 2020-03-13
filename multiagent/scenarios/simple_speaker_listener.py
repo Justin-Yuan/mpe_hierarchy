@@ -161,8 +161,8 @@ class Scenario(BaseScenario):
             return np.concatenate([goal_color])
         # listener
         if agent.silent:
-            # return np.concatenate([agent.state.p_vel] + entity_pos + comm)
             return np.concatenate([agent.state.p_vel] + entity_pos + comm)
+            # return np.concatenate([agent.state.p_vel] + [agent.state.p_pos] + entity_pos + entity_color + comm)
 
 
     def setup_geometry(self, env):

@@ -35,6 +35,8 @@ class Scenario(BaseScenario):
             agent.adversary = True if i < num_adversaries else False
             # agent.size = 0.075 if agent.adversary else 0.05
             agent.size = 0.075 if agent.adversary else 0.05
+            # # NOTE: for debug 
+            # agent.size *= 2
             agent.accel = 3.0 if agent.adversary else 4.0
             #agent.accel = 20.0 if agent.adversary else 25.0
             agent.max_speed = 1.0 if agent.adversary else 1.3
