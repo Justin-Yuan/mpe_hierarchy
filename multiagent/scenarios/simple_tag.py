@@ -33,6 +33,7 @@ class Scenario(BaseScenario):
             agent.collide = True
             agent.silent = kwargs.get("agent_silence", True)
             agent.adversary = True if i < num_adversaries else False
+            agent.type = "adversary" if agent.adversary else "agent"
             # agent.size = 0.075 if agent.adversary else 0.05
             agent.size = 0.075 if agent.adversary else 0.05
             # # NOTE: for debug 

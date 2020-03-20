@@ -39,8 +39,10 @@ class Scenario(BaseScenario):
             agent.silent = False 
         # speaker
         world.agents[0].movable = False
+        world.agents[0].type = "speaker"
         # listener
         world.agents[1].silent = True
+        world.agents[1].type = "listener"
 
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]

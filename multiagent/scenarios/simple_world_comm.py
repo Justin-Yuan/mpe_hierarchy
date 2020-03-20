@@ -34,6 +34,7 @@ class Scenario(BaseScenario):
             # only leader talks
             agent.silent = True if i > 0 else False
             agent.adversary = True if i < num_adversaries else False
+            agent.type = "adversary" if agent.adversary else "agent"
             agent.size = 0.075 if agent.adversary else 0.045
             agent.accel = 3.0 if agent.adversary else 4.0
             #agent.accel = 20.0 if agent.adversary else 25.0

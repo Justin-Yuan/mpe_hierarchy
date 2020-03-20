@@ -18,6 +18,7 @@ class MultiAgentEnv(gym.Env):
 
         self.world = world
         self.agents = self.world.policy_agents
+        self.agent_types = [agent.type for agent in self.agents]
         # set required vectorized gym env property
         self.n = len(world.policy_agents)
         # scenario callbacks

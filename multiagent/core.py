@@ -79,6 +79,8 @@ class Agent(Entity):
         self.action = Action()
         # script behavior to execute
         self.action_callback = None
+        # agent class identifier 
+        self.type = "agent"
 
 
 # agent with fixed skill points 
