@@ -49,7 +49,7 @@ class Scenario(BaseScenario):
             landmark.name = 'landmark %d' % i
             landmark.collide = True
             landmark.movable = False
-            landmark.size = 0.075
+            landmark.size = 0.2
             landmark.boundary = False
             self.change_entity_attribute(landmark, world, **kwargs)
 

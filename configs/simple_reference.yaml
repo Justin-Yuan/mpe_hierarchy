@@ -4,12 +4,12 @@ discrete_action_input: false
 discrete_action: false 
 world_size: 1
 dim_p: 2
-dim_c: 10 
+dim_c: 3 
 num_agents: 2
 num_landmarks: 3
 # entity configs
 agent_pos_init: [uniform, -1, 1]
 landmark_pos_init: [uniform, -1, 1]
 agent_collide: true 
-agent_silence: true  
+agent_silence: false  
 
