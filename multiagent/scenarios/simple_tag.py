@@ -21,6 +21,9 @@ class Scenario(BaseScenario):
         world.shape_rewards = kwargs.get("shape_rewards", False)
         world.per_adv_rewards = kwargs.get("per_adv_rewards", False)
 
+        # dirty hack 
+        world.discrete_action = kwargs.get("discrete_action_space", False)
+
         num_good_agents = kwargs.get("num_good_agents", 1)
         num_adversaries = kwargs.get("num_adversaries", 3)
         num_agents = num_adversaries + num_good_agents
@@ -236,3 +239,62 @@ class Scenario(BaseScenario):
                 viewer.add_geom(d["geom"])
 
 
+    #####################################################################################
+    ### ablation callbacks 
+    ####################################################################################
+
+    def adversary_action_callback(self, agent, world):
+        """ each will chase nearest prey 
+        """
+        dists = [
+            (a, np.sqrt(np.sum(np.square(a.state.p_pos - agent.state.p_pos))))
+            for a in self.good_agents(world)]
+        # find closest 
+        target = sorted(dists, key=lambda x: x[1])[0]
+        action = (target[0] - agent.state.p_pos) / target[1]
+        if world.discrete_action:
+            if np.abs(action[0]) > np.abs(action[1]):
+                action[0] = 1 if action[0] > 0 else -1 
+                action[1] = 0
+            elif np.abs(action[0]) < np.abs(action[1]):
+                action[0] = 0
+                action[1] = 1 if action[1] > 0 else -1 
+            else:
+                action[0] = 0
+                action[1] = 0
+        agent.action.u = action
+        # scale action 
+        sensitivity = 5.0
+        if agent.accel is not None:
+            sensitivity = agent.accel
+        agent.action.u *= sensitivity
+
+
+    def good_agent_action_callback(self, agent, world):
+        """ each will try to avoid predators as much as possible 
+        """
+        dirs = [a.state.p_pos - agent.state.p_pos
+            for a in self.adversaries(world)]
+        # evade directions weightd by inverse distance 
+        action = sum([
+            d / (np.sqrt(np.sum(np.square(d)))**2 + 1e-4) 
+            for d in dirty
+        ])
+        # normalize action 
+        action /= np.sqrt(np.sum(np.square(action)))
+        f world.discrete_action:
+            if np.abs(action[0]) > np.abs(action[1]):
+                action[0] = 1 if action[0] > 0 else -1 
+                action[1] = 0
+            elif np.abs(action[0]) < np.abs(action[1]):
+                action[0] = 0
+                action[1] = 1 if action[1] > 0 else -1 
+            else:
+                action[0] = 0
+                action[1] = 0
+        agent.action.u = action
+        # scale action 
+        sensitivity = 5.0
+        if agent.accel is not None:
+            sensitivity = agent.accel
+        agent.action.u *= sensitivity

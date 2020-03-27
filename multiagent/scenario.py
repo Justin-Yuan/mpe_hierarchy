@@ -40,16 +40,18 @@ class BaseScenario(object):
             fn_registry[change_fn](entity, world, **ent_config)
 
 
-    def reset_world(self, world, **kwargs):
-        raise NotImplementedError
-
-
     def reward(self, agent, world):
         raise NotImplementedError
 
 
     def observation(self, agent, world):
         raise NotImplementedError
+
+
+    # # no placeholder here, since not all scenarios implemented this
+    # # only set it to env if `senarios.info` exist in `make_env`
+    # def info(self, agent, world):
+    #     raise NotImplementedError
 
 
     def render(self, env, mode="human"):

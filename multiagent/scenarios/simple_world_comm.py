@@ -3,6 +3,9 @@ from multiagent.core import World, SkilledAgent, Landmark
 from multiagent.scenario import BaseScenario
 from multiagent.utils import bound_reward
 
+"""
+Same as simple_tag, except (1) there is food (small blue balls) that the good agents are rewarded for being near, (2) we now have ‘forests’ that hide agents inside from being seen from outside; (3) there is a ‘leader adversary” that can see the agents at all times, and can communicate with the other adversaries to help coordinate the chase.
+"""
 
 class Scenario(BaseScenario):
     def make_world(self, **kwargs):

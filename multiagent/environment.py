@@ -160,10 +160,13 @@ class MultiAgentEnv(gym.Env):
         self._reset_render()
         # record observations for each agent
         obs_n = []
+        info_n = {'n': []}
         self.agents = self.world.policy_agents
         for agent in self.agents:
             obs_n.append(self._get_obs(agent))
-        return obs_n
+            info_n['n'].append(self._get_info(agent))
+        # return obs_n
+        return obs_n, info_n
 
     # update world assets / states 
     def _update_world(self):
